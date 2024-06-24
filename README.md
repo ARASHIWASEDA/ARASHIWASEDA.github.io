@@ -6,6 +6,6 @@
 
 本仓库目前的章节目录如下：
 
-[第一章：实现基础的图像分类模型训练 | Hexo (arashiwaseda.github.io)](https://arashiwaseda.github.io/2024/06/24/Chapter_1/)
+[第一章：实现基础的图像分类模型训练 | Knowledge distillation implementation (arashiwaseda.github.io)](https://arashiwaseda.github.io/2023/06/24/Chapter_1/)
 
-[第二章：基本的KD实现 | Hexo (arashiwaseda.github.io)](https://arashiwaseda.github.io/2024/06/24/Chapter_2/)
+[第二章：基本的KD实现 | Knowledge distillation implementation (arashiwaseda.github.io)](https://arashiwaseda.github.io/2023/07/02/Chapter_2/)
