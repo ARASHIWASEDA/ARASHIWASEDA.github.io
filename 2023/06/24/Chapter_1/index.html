@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.2.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="知识蒸馏的训练过程与普通的模型训练过程的基本逻辑是相似的，因此在介绍知识蒸馏算法的代码实现之前，让我们先复习一下如何利用timm和torch实现一份基本的图像分类模型训练代码。 工欲善其事必先利其器，正式编写训练的核心代码前，先介绍一些在许多代码中都有使用的辅助工具。不用这些也没关系，但是随着代码规模的扩大，使用这些库可以帮助提高编写效率。 argparse为了在后续的代码中能够方便的管理训练中的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第一章：实现基础的图像分类模型训练">
+<meta property="og:url" content="http://example.com/2023/06/24/Chapter_1/index.html">
+<meta property="og:site_name" content="Knowledge distillation implementation">
+<meta property="og:description" content="知识蒸馏的训练过程与普通的模型训练过程的基本逻辑是相似的，因此在介绍知识蒸馏算法的代码实现之前，让我们先复习一下如何利用timm和torch实现一份基本的图像分类模型训练代码。 工欲善其事必先利其器，正式编写训练的核心代码前，先介绍一些在许多代码中都有使用的辅助工具。不用这些也没关系，但是随着代码规模的扩大，使用这些库可以帮助提高编写效率。 argparse为了在后续的代码中能够方便的管理训练中的">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2023-06-24T08:11:43.000Z">
+<meta property="article:modified_time" content="2024-06-24T13:01:10.133Z">
+<meta property="article:author" content="Arashi">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2023/06/24/Chapter_1/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2023/06/24/Chapter_1/","path":"2023/06/24/Chapter_1/","title":"第一章：实现基础的图像分类模型训练"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>第一章：实现基础的图像分类模型训练 | Knowledge distillation implementation</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Knowledge distillation implementation</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#argparse"><span class="nav-number">1.</span> <span class="nav-text">argparse</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#logging"><span class="nav-number">2.</span> <span class="nav-text">logging</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%9B%86%E5%87%86%E5%A4%87"><span class="nav-number">3.</span> <span class="nav-text">数据集准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E4%BB%A5%E5%8F%8A%E7%9B%B8%E5%85%B3%E5%86%85%E5%AE%B9%E7%9A%84%E5%87%86%E5%A4%87"><span class="nav-number">4.</span> <span class="nav-text">模型以及相关内容的准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E4%BF%9D%E5%AD%98"><span class="nav-number">5.</span> <span class="nav-text">模型保存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BB%E8%A6%81%E8%AE%AD%E7%BB%83%E6%AD%A5%E9%AA%A4"><span class="nav-number">6.</span> <span class="nav-text">主要训练步骤</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E7%BB%93%E6%9E%9C"><span class="nav-number">7.</span> <span class="nav-text">参考结果</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Arashi</p>
+  <div class="site-description" itemprop="description">Be happy, don't worry.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">2</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/06/24/Chapter_1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Arashi">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Knowledge distillation implementation">
+      <meta itemprop="description" content="Be happy, don't worry.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="第一章：实现基础的图像分类模型训练 | Knowledge distillation implementation">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          第一章：实现基础的图像分类模型训练
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-06-24 17:11:43" itemprop="dateCreated datePublished" datetime="2023-06-24T17:11:43+09:00">2023-06-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2024-06-24 22:01:10" itemprop="dateModified" datetime="2024-06-24T22:01:10+09:00">2024-06-24</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>知识蒸馏的训练过程与普通的模型训练过程的基本逻辑是相似的，因此在介绍知识蒸馏算法的代码实现之前，让我们先复习一下如何利用timm和torch实现一份基本的图像分类模型训练代码。</p>
+<p>工欲善其事必先利其器，正式编写训练的核心代码前，先介绍一些在许多代码中都有使用的辅助工具。不用这些也没关系，但是随着代码规模的扩大，使用这些库可以帮助提高编写效率。</p>
+<h2 id="argparse"><a href="#argparse" class="headerlink" title="argparse"></a>argparse</h2><p>为了在后续的代码中能够方便的管理训练中的诸多参数，推荐使用argparse库。后续如果参数规模增加，可以使用yaml保存部分参数。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> argparse  <span class="comment"># 首先引入 argparse库</span></span><br><span class="line"></span><br><span class="line">parser = argparse.ArgumentParser()  <span class="comment"># 创建一个ArgumentParser类，并添加各种参数</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--learning-rate&quot;</span>, default=<span class="number">0.001</span>, <span class="built_in">type</span>=<span class="built_in">float</span>, <span class="built_in">help</span>=<span class="string">&#x27;learning rate&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--epochs&quot;</span>, default=<span class="number">3</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;epochs to train&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--device&quot;</span>, default=<span class="string">&quot;cuda&quot;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;training device&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--batch-size&quot;</span>, default=<span class="number">32</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;batch size&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--log-interval&quot;</span>, default=<span class="number">500</span>, <span class="built_in">type</span>=<span class="built_in">int</span>,</span><br><span class="line">                    <span class="built_in">help</span>=<span class="string">&#x27;to print log info during every log-interval iterations&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--output&quot;</span>, default=<span class="literal">None</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;output path to save results&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--experiment&quot;</span>, default=<span class="literal">None</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;name of subfolder of outpur dir&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--model&quot;</span>, default=<span class="string">&quot;resnet34&quot;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;model name&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--num-classes&quot;</span>, default=<span class="number">10</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;number of classes of the dataset&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在代码的主函数部分，可以很方便的获取到设定的参数。还可以将参数形成yaml文件保存。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> yaml  <span class="comment"># 用来保存args文件</span></span><br><span class="line"></span><br><span class="line">args = parser.parse_args()</span><br><span class="line"><span class="built_in">print</span>(args.model)  <span class="comment"># &#x27;resnet34&#x27;</span></span><br><span class="line">args_text = yaml.safe_dump(args.__dict__, default_flow_style=<span class="literal">False</span>)</span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(os.path.join(output_dir, <span class="string">&#x27;args.yaml&#x27;</span>), <span class="string">&#x27;w&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    f.write(args_text)</span><br></pre></td></tr></table></figure>
+
+<h2 id="logging"><a href="#logging" class="headerlink" title="logging"></a>logging</h2><p>为了能够更加方便的观察训练过程中的各项指标，我们可以使用print函数打印出损失、准确率等参数，也可以使用如tqdm等库实现更加清晰优美的可视化效果。本博客推荐使用logging库实现日志输出和保存的功能，并且timm库提供了一个setup_default_logging函数方便我们设置日志的输出和保存效果。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> logging  <span class="comment"># 首先依然是引入logging库</span></span><br><span class="line"><span class="keyword">from</span> timm.utils.log <span class="keyword">import</span> setup_default_logging  <span class="comment"># 从timm引入logging的设置函数</span></span><br><span class="line"></span><br><span class="line">_logger = logging.getLogger(<span class="string">&quot;train&quot;</span>)</span><br><span class="line">setup_default_logging(log_path=log_path)  <span class="comment"># 在指定路径生成日志文件</span></span><br><span class="line">_logger.info(<span class="string">&quot;这是一个logging的示例&quot;</span>)  <span class="comment"># 这样就会在console输出文字，用法与print相似</span></span><br></pre></td></tr></table></figure>
+
+<p>点开setup_default_logging函数的源码，看一下是如何实现的。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">FormatterNoInfo</span>(logging.Formatter):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, fmt=<span class="string">&#x27;%(levelname)s: %(message)s&#x27;</span></span>):</span><br><span class="line">        <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">        初始化一个FormatterNoInfo类，主要目的就是为了格式化日志文件的输出格式</span></span><br><span class="line"><span class="string">        如&#x27;%(levelname)s: %(message)s&#x27;，其中levelname代表logging日志的级别</span></span><br><span class="line"><span class="string">        有ERROR、INFO、DEBUG等，message就是你要输出的信息内容，具体可以自行搜索</span></span><br><span class="line"><span class="string">        _logger.info(&quot;这是一个logging的示例&quot;)的输出为：</span></span><br><span class="line"><span class="string">        &#x27;[INFO]: 这是一个logging的示例&#x27;</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        logging.Formatter.__init__(self, fmt)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">format</span>(<span class="params">self, record</span>):</span><br><span class="line">        <span class="keyword">if</span> record.levelno == logging.INFO:</span><br><span class="line">            <span class="keyword">return</span> <span class="built_in">str</span>(record.getMessage())</span><br><span class="line">        <span class="keyword">return</span> logging.Formatter.<span class="built_in">format</span>(self, record)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">setup_default_logging</span>(<span class="params">default_level=logging.INFO, log_path=<span class="string">&#x27;&#x27;</span></span>):</span><br><span class="line">    <span class="comment"># StreamHandler可以将日志信息输出到console</span></span><br><span class="line">    console_handler = logging.StreamHandler()</span><br><span class="line">    <span class="comment"># 使用上面定义的类，格式化日志输出</span></span><br><span class="line">    console_handler.setFormatter(FormatterNoInfo())</span><br><span class="line">    <span class="comment"># 加入console_handler，不然在console可能没有输出</span></span><br><span class="line">    logging.root.addHandler(console_handler)</span><br><span class="line">    <span class="comment"># 设置输出的级别，低于指定级别的信息不会被记录</span></span><br><span class="line">    <span class="comment"># 如果设置级别为INFO，则DEBUG不会被记录，而ERROR、INFO和更高级别的会记录</span></span><br><span class="line">    logging.root.setLevel(default_level)</span><br><span class="line">    <span class="comment"># 保存日志文件，如果不设置路径就不保存</span></span><br><span class="line">    <span class="keyword">if</span> log_path:</span><br><span class="line">        file_handler = logging.handlers.RotatingFileHandler(log_path, maxBytes=(<span class="number">1024</span> ** <span class="number">2</span> * <span class="number">2</span>), backupCount=<span class="number">3</span>)</span><br><span class="line">        file_formatter = logging.Formatter(<span class="string">&quot;%(asctime)s - %(name)20s: [%(levelname)8s] - %(message)s&quot;</span>)</span><br><span class="line">        file_handler.setFormatter(file_formatter)</span><br><span class="line">        logging.root.addHandler(file_handler)</span><br></pre></td></tr></table></figure>
+
+<p>由于本博客是一个基础的教程，因此基本上只会用到info级别的日志，不用在logging上关注太多，即插即用即可。感兴趣的可以自行搜索学习。</p>
+<h2 id="数据集准备"><a href="#数据集准备" class="headerlink" title="数据集准备"></a>数据集准备</h2><p>以图像分类举例，可以通过torchvision库获取数据集。出于方便快捷的目的，这里使用CIFAR10数据集，可以自行换成CIFAR100、MNIST、FashionMNIST等等</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torchvision.datasets <span class="keyword">as</span> datasets</span><br><span class="line"><span class="keyword">import</span> torchvision.transforms <span class="keyword">as</span> transform  <span class="comment"># 读取的数据集需要经过一些变换才可以使用</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># resnet的输入需要（3，224，224）的图片，先不考虑其他的数据增强</span></span><br><span class="line"><span class="comment"># 后续会介绍另外一个数据增强库</span></span><br><span class="line">transforms = transform.Compose([</span><br><span class="line">    transform.Resize(<span class="number">224</span>),</span><br><span class="line">    transform.ToTensor(),</span><br><span class="line">    transform.Normalize(mean=[<span class="number">0.485</span>, <span class="number">0.456</span>, <span class="number">0.406</span>], std=[<span class="number">0.229</span>, <span class="number">0.224</span>, <span class="number">0.225</span>])</span><br><span class="line">])</span><br><span class="line"><span class="comment"># root是数据集的存储路径，download设置为true可以自动下载，imagenet是下载不了的</span></span><br><span class="line">train_dataset = datasets.CIFAR10(root=<span class="string">&quot;datasets&quot;</span>, train=<span class="literal">True</span>, transform=transforms, download=<span class="literal">True</span>)</span><br><span class="line">eval_dataset = datasets.CIFAR10(root=<span class="string">&quot;datasets&quot;</span>, train=<span class="literal">False</span>, transform=transforms, download=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>此时的数据集还不能在训练中使用，但是我们可以通过索引查看任一数据的内容，例如：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(train_dataset[<span class="number">0</span>])  <span class="comment"># 是一个（3，224，224）的tuple</span></span><br></pre></td></tr></table></figure>
+
+<p>一般使用迭代器的形式遍历数据集中的数据：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> torch.utils.data <span class="keyword">import</span> DataLoader  <span class="comment"># 首先导入库</span></span><br><span class="line"></span><br><span class="line">train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=<span class="literal">True</span>)  <span class="comment"># shuffle=True的时候，会打乱顺序</span></span><br><span class="line">eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="模型以及相关内容的准备"><a href="#模型以及相关内容的准备" class="headerlink" title="模型以及相关内容的准备"></a>模型以及相关内容的准备</h2><p>可以使用timm的create_model函数快速的创建需要的模型结构。但是在知识蒸馏中我们可能需要对模型的结构进行修改，这一部分放到后面介绍。先简单的导入一个模型：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> timm  <span class="comment"># 导入timm库</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 下载与训练模型，一般是在imagenet上进行的预训练，具体的训练配置可以到timm.models里面查看</span></span><br><span class="line">model = timm.create_model(args.model, pretrained=<span class="literal">True</span>, num_classes=args.num_classes)  <span class="comment"># resnet34</span></span><br><span class="line">model.cuda()  <span class="comment"># 将模型转移到GPU设备上</span></span><br></pre></td></tr></table></figure>
+
+<p>此外，我们至少还需要准备优化器和损失函数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"></span><br><span class="line"><span class="comment"># optimizer初始化的第一个参数是模型的参数，如果是知识蒸馏代码，这一步会不同</span></span><br><span class="line">optimizer = torch.optim.SGD(model.parameters(), lr=args.learning_rate)</span><br><span class="line">loss_func = nn.CrossEntropyLoss()</span><br></pre></td></tr></table></figure>
+
+<h2 id="模型保存"><a href="#模型保存" class="headerlink" title="模型保存"></a>模型保存</h2><p>训练好的模型需要保存，在正式开始训练之前，我们先设置好模型的保存路径，模型的保存路径取决于以下的两个参数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">parser.add_argument(<span class="string">&quot;--experiment&quot;</span>, default=<span class="literal">None</span>, <span class="built_in">type</span>=<span class="built_in">str</span>,</span><br><span class="line">                    <span class="built_in">help</span>=<span class="string">&#x27;name of subfolder of outpur dir&#x27;</span>)  <span class="comment"># 这个参数主要是方便我们给每次实验起个名字方便查找</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--model&quot;</span>, default=<span class="string">&quot;resnet34&quot;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;model name&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>根据提供的参数，我们设置好模型的保存路径：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> args.experiment:</span><br><span class="line">    exp_name = args.experiment</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    <span class="comment"># 如果没设置experiment的话就按照时间和模型名字保存</span></span><br><span class="line">    exp_name = <span class="string">&#x27;-&#x27;</span>.join([</span><br><span class="line">        datetime.now().strftime(<span class="string">&quot;%Y%m%d-%H%M%S&quot;</span>),</span><br><span class="line">        args.model</span><br><span class="line">    ])</span><br><span class="line"><span class="comment"># 使用timm快捷创建路径文件夹，可以看作os.makedirs，产生的路径就是</span></span><br><span class="line"><span class="comment"># os.path.join(output_path,exp_name)</span></span><br><span class="line"><span class="keyword">from</span> timm.utils.summary <span class="keyword">import</span> get_outdir</span><br><span class="line"></span><br><span class="line">output_dir = get_outdir(output_path, exp_name)  <span class="comment"># 返回的是创建好的文件夹的路径</span></span><br><span class="line">checkpoint_dir = os.path.join(output_dir, <span class="string">&#x27;checkpoints&#x27;</span>)  <span class="comment"># 在checkpoints里面保存模型</span></span><br></pre></td></tr></table></figure>
+
+<p>timm创建的模型是基于torch的，所以我们可以使用torch.save的方法保存模型。但是这里我们使用一个更加方便的方法去保存模型：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> timm.utils.checkpoint_saver <span class="keyword">import</span> CheckpointSaver</span><br><span class="line"></span><br><span class="line">saver = CheckpointSaver(</span><br><span class="line">    model=model,</span><br><span class="line">    optimizer=optimizer,</span><br><span class="line">    args=args,</span><br><span class="line">    checkpoint_dir=checkpoint_dir,</span><br><span class="line">    recovery_dir=checkpoint_dir,</span><br><span class="line">    decreasing=<span class="literal">False</span>,  <span class="comment"># 以指标的升序排列模型</span></span><br><span class="line">    max_history=<span class="number">3</span>  <span class="comment"># 只保存结果最好的3个模型</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>使用上面的方法不仅可以保存模型，还可以自定义许多其他的功能，比我们自己手写模型的保存函数更加方便。当然如果不需要这些功能的话直接使用torch自带的保存功能也，可以参照如下格式简单保存：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">save_state = &#123;</span><br><span class="line">    <span class="string">&#x27;epoch&#x27;</span>: epoch,</span><br><span class="line">    <span class="string">&#x27;state_dict&#x27;</span>: model.static_dict(),</span><br><span class="line">    <span class="string">&#x27;optimizer&#x27;</span>: optimizer.state_dict()</span><br><span class="line">&#125;</span><br><span class="line">torch.save(save_state, save_path)</span><br></pre></td></tr></table></figure>
+
+<h2 id="主要训练步骤"><a href="#主要训练步骤" class="headerlink" title="主要训练步骤"></a>主要训练步骤</h2><p>完成上述的各个准备工作之后，可以正式编写模型的训练代码了。</p>
+<p>我们用如下的结构编写训练的主要代码结构：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    <span class="keyword">pass</span></span><br><span class="line"><span class="comment"># 这里放训练代码</span></span><br><span class="line"><span class="keyword">except</span> KetBoardInterrupt:</span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+
+<p>按照这样的结构编写代码的好处是，运行的时候中断训练过程之后，代码能继续执行剩余的部分，可以留给一些文件的处理和信息保存。</p>
+<p>把训练的代码替换try后面的pass，具体如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, args.epochs + <span class="number">1</span>):  <span class="comment"># 从1开始计算epoch，方便理解</span></span><br><span class="line">    correct = <span class="number">0</span></span><br><span class="line">    total = <span class="number">0</span>  <span class="comment"># 用来计算acc</span></span><br><span class="line">    model.train()  <span class="comment"># 将模型调整到train的模式，一些特殊算子如dropout会被启用</span></span><br><span class="line">    <span class="keyword">for</span> batch_idx, (image, labels) <span class="keyword">in</span> <span class="built_in">enumerate</span>(train_loader):</span><br><span class="line">        image = image.cuda()  <span class="comment"># 将数据转移到cuda设备上</span></span><br><span class="line">        labels = labels.cuda()</span><br><span class="line">        preds = model(image)  <span class="comment"># shape：（batchsize，num_classes）</span></span><br><span class="line">        loss = loss_func(preds, labels)</span><br><span class="line">        pred_labels = torch.argmax(preds.detach(), dim=<span class="number">1</span>)  <span class="comment"># shape：batchsize</span></span><br><span class="line">        correct += (pred_labels == labels).<span class="built_in">sum</span>()</span><br><span class="line">        total += pred_labels.shape[<span class="number">0</span>]</span><br><span class="line">        acc = <span class="number">100.0</span> * correct / total</span><br><span class="line">        <span class="keyword">if</span> batch_idx % args.log_interval == <span class="number">0</span>:  <span class="comment"># 按照log_interval设置间隔打印信息</span></span><br><span class="line">            _logger.info(</span><br><span class="line">                <span class="string">f&#x27;Train-<span class="subst">&#123;epoch&#125;</span>: [<span class="subst">&#123;batch_idx&#125;</span>/<span class="subst">&#123;total_train_iters&#125;</span>], &#x27;</span></span><br><span class="line">                <span class="string">f&#x27;Loss: <span class="subst">&#123;loss.detach():<span class="number">.4</span>f&#125;</span>, Acc: <span class="subst">&#123;acc:<span class="number">.2</span>f&#125;</span>&#x27;</span></span><br><span class="line">            )</span><br><span class="line">        optimizer.zero_grad()  <span class="comment"># 清理之前保存的梯度信息，不然会一直保存历史梯度</span></span><br><span class="line">        loss.backward()  <span class="comment"># 计算反向传播</span></span><br><span class="line">        optimizer.step()  <span class="comment"># 优化器对参数进行迭代更新</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">with</span> torch.no_grad():  <span class="comment"># 这一步很关键，不然验证集的梯度信息可能被记录</span></span><br><span class="line">        model.<span class="built_in">eval</span>()  <span class="comment"># 停用dropout等会对验证结果产生负面影响的算子</span></span><br><span class="line">        correct = <span class="number">0</span></span><br><span class="line">        total = <span class="number">0</span></span><br><span class="line">        <span class="keyword">for</span> batch_idx, (image, labels) <span class="keyword">in</span> <span class="built_in">enumerate</span>(eval_loader):</span><br><span class="line">            image = image.cuda()</span><br><span class="line">            labels = labels.cuda()</span><br><span class="line">            preds = model(image)</span><br><span class="line">            loss = loss_func(preds, labels)</span><br><span class="line">            pred_labels = torch.argmax(preds, dim=<span class="number">1</span>)</span><br><span class="line">            correct += (pred_labels == labels).<span class="built_in">sum</span>()</span><br><span class="line">            total += pred_labels.shape[<span class="number">0</span>]</span><br><span class="line">            acc = <span class="number">100.0</span> * correct / total</span><br><span class="line">            <span class="keyword">if</span> batch_idx % args.log_interval == <span class="number">0</span>:</span><br><span class="line">                _logger.info(</span><br><span class="line">                    <span class="string">f&#x27;\tEval-<span class="subst">&#123;epoch&#125;</span>: [<span class="subst">&#123;batch_idx&#125;</span>/<span class="subst">&#123;total_eval_iters&#125;</span>], &#x27;</span></span><br><span class="line">                    <span class="string">f&#x27;Loss: <span class="subst">&#123;loss:<span class="number">.4</span>f&#125;</span>, Acc: <span class="subst">&#123;acc:<span class="number">.2</span>f&#125;</span>&#x27;</span></span><br><span class="line">                )</span><br><span class="line">        <span class="comment"># 按照指标保存模型，也可以按照loss的最小值保存模型，但在前面需要设置decreasing=True</span></span><br><span class="line">        best_metric, best_epoch = saver.save_checkpoint(epoch, metric=acc)</span><br></pre></td></tr></table></figure>
+
+<p>最后，我们可以加上一行代码输出最好指标的相关信息：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> best_metric <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">    _logger.info(<span class="string">f&#x27;***** Best metric is <span class="subst">&#123;best_metric:<span class="number">.2</span>f&#125;</span>(<span class="subst">&#123;best_epoch&#125;</span>) *****.&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考结果"><a href="#参考结果" class="headerlink" title="参考结果"></a>参考结果</h2><p>用resnet18在CIFAR10上跑5个epoch简单看看效果，证明能跑起来就算是完成了。</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">34</span>:<span class="number">11</span>,<span class="number">548</span> -                train: [    INFO] - Train-<span class="number">5</span>: [<span class="number">0</span>/<span class="number">1563</span>], Loss: <span class="number">0</span>.<span class="number">9199</span>, Acc: <span class="number">87</span>.<span class="number">50</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">34</span>:<span class="number">36</span>,<span class="number">611</span> -                train: [    INFO] - Train-<span class="number">5</span>: [<span class="number">500</span>/<span class="number">1563</span>], Loss: <span class="number">0</span>.<span class="number">8576</span>, Acc: <span class="number">75</span>.<span class="number">21</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">01</span>,<span class="number">864</span> -                train: [    INFO] - Train-<span class="number">5</span>: [<span class="number">1000</span>/<span class="number">1563</span>], Loss: <span class="number">0</span>.<span class="number">9366</span>, Acc: <span class="number">75</span>.<span class="number">35</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">27</span>,<span class="number">597</span> -                train: [    INFO] - Train-<span class="number">5</span>: [<span class="number">1500</span>/<span class="number">1563</span>], Loss: <span class="number">0</span>.<span class="number">8731</span>, Acc: <span class="number">75</span>.<span class="number">67</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">30</span>,<span class="number">725</span> -                train: [    INFO] - Train-<span class="number">5</span>: [<span class="number">1562</span>/<span class="number">1563</span>], Loss: <span class="number">0</span>.<span class="number">8844</span>, Acc: <span class="number">75</span>.<span class="number">78</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">30</span>,<span class="number">763</span> -                train: [    INFO] - 	Eval-<span class="number">5</span>: [<span class="number">0</span>/<span class="number">313</span>], Loss: <span class="number">0</span>.<span class="number">9541</span>, Acc: <span class="number">65</span>.<span class="number">62</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">37</span>,<span class="number">324</span> -                train: [    INFO] - 	Eval-<span class="number">5</span>: [<span class="number">312</span>/<span class="number">313</span>], Loss: <span class="number">1</span>.<span class="number">0666</span>, Acc: <span class="number">78</span>.<span class="number">65</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">37</span>,<span class="number">372</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:</span><br><span class="line"> (&#x27;./output/train\\<span class="number">20240620</span>-<span class="number">152832</span>-resnet18\\checkpoints\\checkpoint-<span class="number">5</span>.pth.tar&#x27;, tensor(<span class="number">78</span>.<span class="number">6500</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/train\\<span class="number">20240620</span>-<span class="number">152832</span>-resnet18\\checkpoints\\checkpoint-<span class="number">4</span>.pth.tar&#x27;, tensor(<span class="number">74</span>.<span class="number">9300</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/train\\<span class="number">20240620</span>-<span class="number">152832</span>-resnet18\\checkpoints\\checkpoint-<span class="number">2</span>.pth.tar&#x27;, tensor(<span class="number">67</span>.<span class="number">0100</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">20</span> <span class="number">15</span>:<span class="number">35</span>:<span class="number">37</span>,<span class="number">372</span> -                train: [    INFO] - ***** Best metric is <span class="number">78</span>.<span class="number">65</span>(<span class="number">5</span>) *****.</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/07/02/Chapter_2/" rel="next" title="第二章：基本的KD实现">
+                  第二章：基本的KD实现 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2024</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Arashi</span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
