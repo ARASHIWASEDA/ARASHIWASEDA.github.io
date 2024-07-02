@@ -1,338 +1,745 @@
+
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN" data-default-color-scheme=dark>
+
+
+
 <head>
   <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width">
-<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 7.2.0">
-
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
-  <link rel="mask-icon" href="/images/logo.svg" color="#222">
-
-<link rel="stylesheet" href="/css/main.css">
-
-
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha256-XOqroi11tY4EFQMR9ZYwZWKj5ZXiftSx36RRuC3anlA=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
-
-<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.20.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
-
-    <meta name="description" content="本章节将正式进入知识蒸馏代码的编写部分，目标是简单复现Hinton老爷子提出的最经典的Knowledge Distillation算法。 导入各种库首先导入本篇需要用到的各种库： 1234567891011121314151617import argparseimport yamlimport osimport loggingfrom datetime import datetimeimport">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.ico">
+  <link rel="icon" href="/img/myfavicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Arashi">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="本章节将正式进入知识蒸馏代码的编写部分，目标是简单复现Hinton老爷子提出的最经典的Knowledge Distillation算法。 导入各种库 首先导入本篇需要用到的各种库： 1234567891011121314151617import argparseimport yamlimport osimport loggingfrom datetime import datetimeim">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第二章：基本的KD实现">
 <meta property="og:url" content="http://example.com/2023/07/02/Chapter_2/index.html">
 <meta property="og:site_name" content="Knowledge distillation implementation">
-<meta property="og:description" content="本章节将正式进入知识蒸馏代码的编写部分，目标是简单复现Hinton老爷子提出的最经典的Knowledge Distillation算法。 导入各种库首先导入本篇需要用到的各种库： 1234567891011121314151617import argparseimport yamlimport osimport loggingfrom datetime import datetimeimport">
-<meta property="og:locale" content="en_US">
+<meta property="og:description" content="本章节将正式进入知识蒸馏代码的编写部分，目标是简单复现Hinton老爷子提出的最经典的Knowledge Distillation算法。 导入各种库 首先导入本篇需要用到的各种库： 1234567891011121314151617import argparseimport yamlimport osimport loggingfrom datetime import datetimeim">
+<meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-07-02T08:13:32.000Z">
-<meta property="article:modified_time" content="2024-06-24T13:01:29.376Z">
+<meta property="article:modified_time" content="2024-06-27T08:19:35.184Z">
 <meta property="article:author" content="Arashi">
-<meta name="twitter:card" content="summary">
+<meta property="article:tag" content="知识蒸馏">
+<meta property="article:tag" content="Knowledge distillation">
+<meta property="article:tag" content="PyTorch">
+<meta property="article:tag" content="timm">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>第二章：基本的KD实现 - Knowledge distillation implementation</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
 
-<link rel="canonical" href="http://example.com/2023/07/02/Chapter_2/">
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
 
 
 
-<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2023/07/02/Chapter_2/","path":"2023/07/02/Chapter_2/","title":"第二章：基本的KD实现"}</script>
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
 
-<script class="next-config" data-name="calendar" type="application/json">""</script>
-<title>第二章：基本的KD实现 | Knowledge distillation implementation</title>
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
   
 
 
 
+  
+<link rel="stylesheet" href="/css/custom.css">
 
 
 
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.7","typing":{"enable":false,"typeSpeed":70,"cursorChar":"","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"gtag":null},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
 
 
-  <noscript>
-    <link rel="stylesheet" href="/css/noscript.css">
-  </noscript>
-</head>
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
 
-<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
-  <div class="headband"></div>
 
-  <main class="main">
-    <div class="column">
-      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
-  <div class="site-nav-toggle">
-    <div class="toggle" aria-label="Toggle navigation bar" role="button">
-    </div>
-  </div>
+<body>
+  
 
-  <div class="site-meta">
+  <header>
+    
 
-    <a href="/" class="brand" rel="start">
-      <i class="logo-line"></i>
-      <p class="site-title">Knowledge distillation implementation</p>
-      <i class="logo-line"></i>
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>ARASHI&#39;s Blog</strong>
     </a>
-  </div>
 
-  <div class="site-nav-right">
-    <div class="toggle popup-trigger" aria-label="Search" role="button">
-    </div>
-  </div>
-</div>
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
 
-
-
-
-
-
-
-</header>
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
         
-  
-  <aside class="sidebar">
-
-    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
-      <ul class="sidebar-nav">
-        <li class="sidebar-nav-toc">
-          Table of Contents
-        </li>
-        <li class="sidebar-nav-overview">
-          Overview
-        </li>
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
       </ul>
-
-      <div class="sidebar-panel-container">
-        <!--noindex-->
-        <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%BC%E5%85%A5%E5%90%84%E7%A7%8D%E5%BA%93"><span class="nav-number">1.</span> <span class="nav-text">导入各种库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96logging"><span class="nav-number">2.</span> <span class="nav-text">初始化logging</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%8F%82%E6%95%B0"><span class="nav-number">3.</span> <span class="nav-text">配置参数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%9B%86%E5%87%86%E5%A4%87"><span class="nav-number">4.</span> <span class="nav-text">数据集准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E5%87%86%E5%A4%87"><span class="nav-number">5.</span> <span class="nav-text">模型准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%92%B8%E9%A6%8F%E5%99%A8%E5%87%86%E5%A4%87"><span class="nav-number">6.</span> <span class="nav-text">蒸馏器准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BB%E5%87%BD%E6%95%B0%E7%9A%84%E5%89%A9%E4%BD%99%E9%83%A8%E5%88%86"><span class="nav-number">7.</span> <span class="nav-text">主函数的剩余部分</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E5%92%8C%E9%AA%8C%E8%AF%81%E5%87%BD%E6%95%B0"><span class="nav-number">8.</span> <span class="nav-text">训练和验证函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E5%87%BD%E6%95%B0"><span class="nav-number">8.1.</span> <span class="nav-text">训练函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AA%8C%E8%AF%81%E5%87%BD%E6%95%B0"><span class="nav-number">8.2.</span> <span class="nav-text">验证函数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%88%E6%9E%9C%E5%B1%95%E7%A4%BA"><span class="nav-number">9.</span> <span class="nav-text">效果展示</span></a></li></ol></div>
-        </div>
-        <!--/noindex-->
-
-        <div class="site-overview-wrap sidebar-panel">
-          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
-  <p class="site-author-name" itemprop="name">Arashi</p>
-  <div class="site-description" itemprop="description">Be happy, don't worry.</div>
-</div>
-<div class="site-state-wrap animated">
-  <nav class="site-state">
-      <div class="site-state-item site-state-posts">
-        <a href="/archives/">
-          <span class="site-state-item-count">2</span>
-          <span class="site-state-item-name">posts</span>
-        </a>
-      </div>
-  </nav>
-</div>
-
-        </div>
-      </div>
     </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('https://cdn.jsdelivr.net/gh/fanlumaster/BlogMaps@master/blogs/pictures/78316639_p02.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">第二章：基本的KD实现</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-07-02 17:13" pubdate>
+          2023年7月2日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          2.3k 字
+        
+      </span>
+    
 
     
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          20 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">第二章：基本的KD实现</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>本章节将正式进入知识蒸馏代码的编写部分，目标是简单复现Hinton老爷子提出的最经典的Knowledge
+Distillation算法。</p>
+<h2 id="导入各种库">导入各种库</h2>
+<p>首先导入本篇需要用到的各种库：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">import</span> argparse<br><span class="hljs-keyword">import</span> yaml<br><span class="hljs-keyword">import</span> os<br><span class="hljs-keyword">import</span> logging<br><span class="hljs-keyword">from</span> datetime <span class="hljs-keyword">import</span> datetime<br><br><span class="hljs-keyword">import</span> torch<br><span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn<br><span class="hljs-keyword">from</span> torch.utils.data <span class="hljs-keyword">import</span> DataLoader<br><span class="hljs-keyword">import</span> torchvision.datasets <span class="hljs-keyword">as</span> datasets<br><span class="hljs-keyword">import</span> torchvision.transforms <span class="hljs-keyword">as</span> transform<br><br><span class="hljs-keyword">from</span> timm.utils.log <span class="hljs-keyword">import</span> setup_default_logging<br><span class="hljs-keyword">from</span> timm.utils.summary <span class="hljs-keyword">import</span> get_outdir<br><span class="hljs-keyword">from</span> timm.utils.checkpoint_saver <span class="hljs-keyword">import</span> CheckpointSaver<br><span class="hljs-keyword">from</span> timm.models <span class="hljs-keyword">import</span> create_model, load_checkpoint<br><span class="hljs-keyword">from</span> distillers <span class="hljs-keyword">import</span> get_distiller<br></code></pre></td></tr></table></figure>
+<h2 id="初始化logging">初始化logging</h2>
+<p>设置logging用于输出日志信息，用法可以查看本仓库第一章。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># logger setting</span><br>_logger = logging.getLogger(<span class="hljs-string">&quot;train&quot;</span>)<br></code></pre></td></tr></table></figure>
+<h2 id="配置参数">配置参数</h2>
+<p>相较于第一章的参数增加了蒸馏相关配置。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># configs setting</span><br>parser = argparse.ArgumentParser()<br>parser.add_argument(<span class="hljs-string">&quot;--model&quot;</span>, default=<span class="hljs-string">&quot;resnet18&quot;</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;model name&#x27;</span>) <span class="hljs-comment"># 学生模型</span><br>parser.add_argument(<span class="hljs-string">&quot;--learning-rate&quot;</span>, default=<span class="hljs-number">0.01</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">float</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;learning rate&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--epochs&quot;</span>, default=<span class="hljs-number">3</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">int</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;epochs to train&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--device&quot;</span>, default=<span class="hljs-string">&quot;cuda&quot;</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;training device&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--batch-size&quot;</span>, default=<span class="hljs-number">32</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">int</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;batch size&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--log-interval&quot;</span>, default=<span class="hljs-number">500</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">int</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;to print log info every designated iters&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--output&quot;</span>, default=<span class="hljs-literal">None</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;output path to save results&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--experiment&quot;</span>, default=<span class="hljs-literal">None</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;name of subfolder of outpur dir&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--num-classes&quot;</span>, default=<span class="hljs-number">10</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">int</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;number of classes of the dataset&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--pretrained&quot;</span>, default=<span class="hljs-literal">False</span>, action=<span class="hljs-string">&#x27;store_true&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--dataset-download&quot;</span>, default=<span class="hljs-literal">False</span>, action=<span class="hljs-string">&#x27;store_true&#x27;</span>)<br>parser.add_argument(<span class="hljs-string">&quot;--dataset&quot;</span>, default=<span class="hljs-string">&#x27;cifar10&#x27;</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;support cifar10 or cifar100 now&#x27;</span>)<br><br><span class="hljs-comment"># distillation setting</span><br>parser.add_argument(<span class="hljs-string">&quot;--distiller&quot;</span>, default=<span class="hljs-string">&#x27;vanilla&#x27;</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>) <span class="hljs-comment"># 蒸馏器名字</span><br>parser.add_argument(<span class="hljs-string">&quot;--teacher&quot;</span>, default=<span class="hljs-literal">None</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;name of teacher model&#x27;</span>) <span class="hljs-comment"># 教师模型</span><br>parser.add_argument(<span class="hljs-string">&quot;--teacher-pretrained&quot;</span>, default=<span class="hljs-literal">False</span>, action=<span class="hljs-string">&#x27;store_true&#x27;</span>) <span class="hljs-comment"># 这里激活的话会从timm搭导入在imagenet2012与训练的模型，一般用不到，除非要在imagenet2012上训练学生模型</span><br>parser.add_argument(<span class="hljs-string">&quot;--teacher-weight&quot;</span>, default=<span class="hljs-string">&#x27;./weights/resnet/resnet50_cifar10.pth.tar&#x27;</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">str</span>,<br>                    <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;path of pre-trained teacher weight&#x27;</span>) <span class="hljs-comment"># 教师模型路径</span><br>parser.add_argument(<span class="hljs-string">&quot;--kd-temperature&quot;</span>, default=<span class="hljs-number">4.</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">float</span>, <span class="hljs-built_in">help</span>=<span class="hljs-string">&#x27;distillation temperature&#x27;</span>) <span class="hljs-comment"># 知识蒸馏温度</span><br>parser.add_argument(<span class="hljs-string">&quot;--kd-loss-weight&quot;</span>, default=<span class="hljs-number">1.</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">float</span>) <span class="hljs-comment"># 知识蒸馏损失系数</span><br>parser.add_argument(<span class="hljs-string">&quot;--gt-loss-weight&quot;</span>, default=<span class="hljs-number">1.</span>, <span class="hljs-built_in">type</span>=<span class="hljs-built_in">float</span>) <span class="hljs-comment"># 学生损失函数系数</span><br></code></pre></td></tr></table></figure>
+<h2 id="数据集准备">数据集准备</h2>
+<p>CIFAR10或者CIAFR100。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">if</span> args.dataset == <span class="hljs-string">&#x27;cifar10&#x27;</span>:<br>    transforms = transform.Compose([<br>        transform.Resize(<span class="hljs-number">224</span>),<br>        transform.ToTensor(),<br>        transform.Normalize(mean=(<span class="hljs-number">0.4914</span>, <span class="hljs-number">0.4822</span>, <span class="hljs-number">0.4465</span>), std=(<span class="hljs-number">0.2023</span>, <span class="hljs-number">0.1994</span>, <span class="hljs-number">0.2010</span>))<br>    ])<br>    train_dataset = datasets.CIFAR10(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">True</span>, transform=transforms,<br>                                     download=args.dataset_download)<br>    eval_dataset = datasets.CIFAR10(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">False</span>, transform=transforms,<br>                                    download=args.dataset_download)<br><span class="hljs-keyword">else</span>:<br>    transforms = transform.Compose([<br>        transform.Resize(<span class="hljs-number">224</span>),<br>        transform.ToTensor(),<br>        transform.Normalize(mean=((<span class="hljs-number">0.5071</span>, <span class="hljs-number">0.4867</span>, <span class="hljs-number">0.4408</span>)), std=(<span class="hljs-number">0.2675</span>, <span class="hljs-number">0.2565</span>, <span class="hljs-number">0.2761</span>))<br>    ])<br>    train_dataset = datasets.CIFAR100(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">True</span>, transform=transforms,<br>                                      download=args.dataset_download)<br>    eval_dataset = datasets.CIFAR100(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">False</span>, transform=transforms,<br>                                     download=args.dataset_download)<br>    <span class="hljs-comment"># create dataloader</span><br>    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=<span class="hljs-literal">True</span>)<br>    eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=<span class="hljs-literal">False</span>)<br></code></pre></td></tr></table></figure>
+<h2 id="模型准备">模型准备</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># create model</span><br>model = create_model(args.model, pretrained=args.pretrained, num_classes=args.num_classes)<br><br><span class="hljs-comment"># create teacher model</span><br>teacher = <span class="hljs-literal">None</span><br><span class="hljs-keyword">if</span> args.teacher:<br>    teacher = create_model(args.teacher, pretrained=args.teacher_pretrained, num_classes=args.num_classes)<br>    <span class="hljs-keyword">if</span> args.teacher_weight:<br>        load_checkpoint(teacher, args.teacher_weight)<br>    teacher.requires_grad_(<span class="hljs-literal">False</span>)<br>    teacher.<span class="hljs-built_in">eval</span>()<br><br><span class="hljs-comment"># create optimizer</span><br>loss_func = nn.CrossEntropyLoss()<br></code></pre></td></tr></table></figure>
+<h2 id="蒸馏器准备">蒸馏器准备</h2>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># create distiller</span><br>Distiller = get_distiller(args.distiller.lower())<br>distiller = Distiller(model, teacher, loss_func, args)<br>distiller.to(device)<br>optimizer = torch.optim.SGD(distiller.parameters(), lr=args.learning_rate)<br></code></pre></td></tr></table></figure>
+<p>这段代码中使用的get_distiller和Distiller来自于自定义的函数和类。</p>
+<p>具体的做法是，在train.py下新建文件夹distillers，在distillers文件夹中新建registry.py文件并添加以下代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">from</span> collections <span class="hljs-keyword">import</span> defaultdict<br><br>_distiller_dict = defaultdict()<br><br><span class="hljs-comment"># 这个函数会被用作装饰器，将定义好的蒸馏器类加入到_distiller_dict中，方便后续获取</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">register_distiller</span>(<span class="hljs-params">distiller</span>):<br>    distiller_name = distiller.__name__.lower()<br>    _distiller_dict[distiller_name] = distiller<br>    <span class="hljs-keyword">return</span> distiller<br><br><span class="hljs-comment"># 通过名字获取对应蒸馏器的类</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">get_distiller</span>(<span class="hljs-params">distiller_name</span>):<br>    <span class="hljs-keyword">return</span> _distiller_dict[distiller_name]<br></code></pre></td></tr></table></figure>
+<p>继续在distillers文件夹中添加文件distillation_losses.py：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 这是基本kd算法中损失函数的实现，后续在这个文件中还会补充其他的损失函数</span><br><span class="hljs-keyword">import</span> torch.nn.functional <span class="hljs-keyword">as</span> F<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">kd_loss</span>(<span class="hljs-params">logits_student, logits_teacher, kd_temperature</span>):<br>    log_pred_student = F.log_softmax(logits_student / kd_temperature, dim=<span class="hljs-number">1</span>)<br>    pred_teacher = F.softmax(logits_teacher / kd_temperature, dim=<span class="hljs-number">1</span>)<br>    loss_kd = F.kl_div(log_pred_student, pred_teacher, reduction=<span class="hljs-string">&#x27;batchmean&#x27;</span>)<br>    loss_kd *= kd_temperature ** <span class="hljs-number">2</span><br>    <span class="hljs-keyword">return</span> loss_kd<br></code></pre></td></tr></table></figure>
+<p>继续在distillers文件夹中添加文件_base.py：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 实现一个基础的蒸馏器类，后续所有的蒸馏器都继承于此类</span><br><span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn<br><br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">BaseDistiller</span>(nn.Module):<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(BaseDistiller, self).__init__()<br>        self.student = student<br>        self.teacher = teacher<br>        self.criterion = criterion<br>        self.args = args<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x</span>):<br>        <span class="hljs-keyword">raise</span> NotImplementedError<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">compute_parameters</span>(<span class="hljs-params">self</span>):<br>        <span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">        这个函数用来统计参数</span><br><span class="hljs-string">        &quot;&quot;&quot;</span><br>        student_params = <span class="hljs-number">0</span><br>        teacher_params = <span class="hljs-number">0</span><br>        extra_params = <span class="hljs-number">0</span><br>        <span class="hljs-keyword">for</span> n, p <span class="hljs-keyword">in</span> self.named_parameters():<br>            <span class="hljs-keyword">if</span> n.startswith(<span class="hljs-string">&#x27;student&#x27;</span>):<br>                student_params += p.numel()<br>            <span class="hljs-keyword">elif</span> n.startswith(<span class="hljs-string">&#x27;teacher&#x27;</span>):<br>                teacher_params += p.numel()<br>            <span class="hljs-keyword">else</span>:<br>                <span class="hljs-keyword">if</span> p.requires_grad:<br>                    extra_params += p.numel()<br>        <span class="hljs-keyword">return</span> student_params, teacher_params, extra_params<br></code></pre></td></tr></table></figure>
+<p>继续在distillers文件夹中添加文件kd.py：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 实现KD类</span><br><span class="hljs-keyword">from</span> .distillation_losses <span class="hljs-keyword">import</span> kd_loss<br><span class="hljs-keyword">from</span> ._base <span class="hljs-keyword">import</span> BaseDistiller<br><span class="hljs-keyword">from</span> .registry <span class="hljs-keyword">import</span> register_distiller<br><span class="hljs-keyword">import</span> torch<br><br><br><span class="hljs-meta">@register_distiller </span><span class="hljs-comment"># 用装饰器将这个类记录下来</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">KD</span>(<span class="hljs-title class_ inherited__">BaseDistiller</span>):<br>    requires_feature = <span class="hljs-literal">False</span> <span class="hljs-comment"># 这个参数指示不需要中间层特征</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(KD, self).__init__(student, teacher, criterion, args)<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, image, label</span>):<br>        <span class="hljs-keyword">with</span> torch.no_grad():<br>            self.teacher.<span class="hljs-built_in">eval</span>()<br>            logits_teacher = self.teacher(image)<br>        logits_student = self.student(image)<br>        loss_kd = self.args.kd_loss_weight * kd_loss(logits_student, logits_teacher, self.args.kd_temperature)<br>        loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)<br>        losses_dict = &#123;<br>            <span class="hljs-string">&#x27;loss_kd&#x27;</span>: loss_kd,<br>            <span class="hljs-string">&#x27;loss_gt&#x27;</span>: loss_gt<br>        &#125;<br>        <span class="hljs-keyword">return</span> logits_student, losses_dict<br></code></pre></td></tr></table></figure>
+<p>继续在distillers文件夹中添加文件vanilla.py：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 为了让train.py代码结构统一起来，把非蒸馏的普通训练也写成一个类</span><br><span class="hljs-keyword">from</span> ._base <span class="hljs-keyword">import</span> BaseDistiller<br><span class="hljs-keyword">from</span> .registry <span class="hljs-keyword">import</span> register_distiller<br><br><br><span class="hljs-meta">@register_distiller</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">Vanilla</span>(<span class="hljs-title class_ inherited__">BaseDistiller</span>):<br>    requires_feature = <span class="hljs-literal">False</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(Vanilla, self).__init__(student, teacher, criterion, args)<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, image, label</span>):<br>        logits_student = self.student(image)<br>        loss_gt = self.criterion(logits_student, label)<br>        losses_dict = &#123;<br>            <span class="hljs-string">&#x27;loss_gt&#x27;</span>: loss_gt<br>        &#125;<br>        <span class="hljs-keyword">return</span> logits_student, losses_dict<br></code></pre></td></tr></table></figure>
+<p>最后在distillers文件夹中添加文件__init__.py：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># 如果后面定义类新的类，这里需要再添加条目</span><br><span class="hljs-keyword">from</span> .vanilla <span class="hljs-keyword">import</span> Vanilla<br><span class="hljs-keyword">from</span> .kd <span class="hljs-keyword">import</span> KD<br><span class="hljs-keyword">from</span> .distillation_losses <span class="hljs-keyword">import</span> kd_loss<br><span class="hljs-keyword">from</span> .registry <span class="hljs-keyword">import</span> get_distiller<br></code></pre></td></tr></table></figure>
+<h2 id="主函数的剩余部分">主函数的剩余部分</h2>
+<p>一部分是路径、logger、device等的设置：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># process args and some paths</span><br>args = parser.parse_args()<br>args_text = yaml.safe_dump(args.__dict__, default_flow_style=<span class="hljs-literal">False</span>)<br>output_path = args.output <span class="hljs-keyword">if</span> args.output <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span> <span class="hljs-keyword">else</span> <span class="hljs-string">&#x27;./output/train&#x27;</span><br><span class="hljs-keyword">if</span> args.experiment:<br>    exp_name = args.experiment<br><span class="hljs-keyword">else</span>:<br>    exp_name = <span class="hljs-string">&#x27;-&#x27;</span>.join([<br>        datetime.now().strftime(<span class="hljs-string">&quot;%Y%m%d-%H%M%S&quot;</span>),<br>        args.model<br>    ])<br>output_dir = get_outdir(output_path, exp_name)<br>log_path = os.path.join(output_dir, <span class="hljs-string">&#x27;train.log&#x27;</span>)<br>checkpoint_dir = os.path.join(output_dir, <span class="hljs-string">&#x27;checkpoints&#x27;</span>)<br>os.makedirs(checkpoint_dir)<br><br><span class="hljs-comment"># setup logging</span><br>setup_default_logging(log_path=log_path)<br><br><span class="hljs-comment"># choose device</span><br>device = torch.device(<span class="hljs-string">&quot;cuda&quot;</span> <span class="hljs-keyword">if</span> torch.cuda.is_available() <span class="hljs-keyword">else</span> <span class="hljs-string">&quot;cpu&quot;</span>)<br></code></pre></td></tr></table></figure>
+<p>一部分是训练和验证的内容：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># Train and validation</span><br>total_train_iters = <span class="hljs-built_in">len</span>(train_loader)<br>total_eval_iters = <span class="hljs-built_in">len</span>(eval_loader)<br>best_metric = <span class="hljs-literal">None</span><br><br>saver = CheckpointSaver(<br>    model=model,<br>    optimizer=optimizer,<br>    args=args,<br>    checkpoint_dir=checkpoint_dir,<br>    recovery_dir=checkpoint_dir,<br>    decreasing=<span class="hljs-literal">False</span>,<br>    max_history=<span class="hljs-number">3</span><br>)<br><span class="hljs-keyword">with</span> <span class="hljs-built_in">open</span>(os.path.join(output_dir, <span class="hljs-string">&#x27;args.yaml&#x27;</span>), <span class="hljs-string">&#x27;w&#x27;</span>) <span class="hljs-keyword">as</span> f:<br>    f.write(args_text)<br><span class="hljs-keyword">try</span>:<br>    <span class="hljs-keyword">for</span> epoch <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, args.epochs + <span class="hljs-number">1</span>):<br>        train(epoch=epoch,<br>              distiller=distiller,<br>              loader=train_loader,<br>              optimizer=optimizer,<br>              args=args,<br>              device=device,<br>              total_iters=total_train_iters)<br><br>        best_metric, best_epoch = <span class="hljs-built_in">eval</span>(epoch=epoch,<br>                                       model=model,<br>                                       loader=eval_loader,<br>                                       args=args,<br>                                       device=device,<br>                                       total_iters=total_eval_iters,<br>                                       loss_func=loss_func,<br>                                       saver=saver)<br><br><span class="hljs-keyword">except</span> KeyboardInterrupt:<br>    <span class="hljs-keyword">pass</span><br><span class="hljs-keyword">if</span> best_metric <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:<br>    _logger.info(<span class="hljs-string">f&#x27;***** Best metric is <span class="hljs-subst">&#123;best_metric:<span class="hljs-number">.2</span>f&#125;</span>(<span class="hljs-subst">&#123;best_epoch&#125;</span>) *****.&#x27;</span>)<br></code></pre></td></tr></table></figure>
+<h2 id="训练和验证函数">训练和验证函数</h2>
+<p>为了让主函数看起来更加清晰和美观一点，把训练和验证的代码单独写一个新的函数。</p>
+<h3 id="训练函数">训练函数</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">train</span>(<span class="hljs-params">epoch, distiller, loader, optimizer, args, device, total_iters</span>):<br>    correct = <span class="hljs-number">0</span><br>    total = <span class="hljs-number">0</span><br>    distiller.train()<br>    <span class="hljs-keyword">for</span> batch_idx, (images, labels) <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(loader):<br>        image = images.to(device)<br>        labels = labels.to(device)<br>        logits_student, losses_dict = distiller(image, labels)<br>        loss = <span class="hljs-built_in">sum</span>(losses_dict.values())<br>        preds = torch.argmax(logits_student.detach(), dim=<span class="hljs-number">1</span>)<br>        correct += (preds == labels).<span class="hljs-built_in">sum</span>()<br>        total += preds.shape[<span class="hljs-number">0</span>]<br>        acc = <span class="hljs-number">100.0</span> * correct / total<br>        <span class="hljs-keyword">if</span> batch_idx % args.log_interval == <span class="hljs-number">0</span> <span class="hljs-keyword">or</span> batch_idx == total_iters - <span class="hljs-number">1</span>:<br>            losses_infos = []<br>            <span class="hljs-keyword">for</span> k, v <span class="hljs-keyword">in</span> losses_dict.items():<br>                info = <span class="hljs-string">f&#x27;<span class="hljs-subst">&#123;k.capitalize()&#125;</span> - <span class="hljs-subst">&#123;v.item():<span class="hljs-number">.4</span>f&#125;</span>&#x27;</span><br>                losses_infos.append(info)<br>            losses_info = <span class="hljs-string">&#x27;  &#x27;</span>.join(losses_infos)<br>            _logger.info(<br>                <span class="hljs-string">f&#x27;Train-<span class="hljs-subst">&#123;epoch&#125;</span>: [<span class="hljs-subst">&#123;batch_idx&#125;</span>/<span class="hljs-subst">&#123;total_iters&#125;</span>], &#x27;</span><br>                <span class="hljs-string">f&#x27;Loss: <span class="hljs-subst">&#123;losses_info&#125;</span>, Acc: <span class="hljs-subst">&#123;acc:<span class="hljs-number">.2</span>f&#125;</span>&#x27;</span><br>            )<br>        optimizer.zero_grad()<br>        loss.backward()<br>        optimizer.step()<br></code></pre></td></tr></table></figure>
+<h3 id="验证函数">验证函数</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">eval</span>(<span class="hljs-params">epoch, model, loader, args, device, total_iters, loss_func, saver</span>):<br>    <span class="hljs-keyword">with</span> torch.no_grad():<br>        model.<span class="hljs-built_in">eval</span>()<br>        correct = <span class="hljs-number">0</span><br>        total = <span class="hljs-number">0</span><br>        <span class="hljs-keyword">for</span> batch_idx, (image, labels) <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(loader):<br>            image = image.to(device)<br>            labels = labels.to(device)<br>            preds = model(image)<br>            loss = loss_func(preds, labels)<br>            pred_labels = torch.argmax(preds, dim=<span class="hljs-number">1</span>)<br>            correct += (pred_labels == labels).<span class="hljs-built_in">sum</span>()<br>            total += pred_labels.shape[<span class="hljs-number">0</span>]<br>            acc = <span class="hljs-number">100.0</span> * correct / total<br>            <span class="hljs-keyword">if</span> batch_idx % args.log_interval == <span class="hljs-number">0</span> <span class="hljs-keyword">or</span> batch_idx == total_iters - <span class="hljs-number">1</span>:<br>                _logger.info(<br>                    <span class="hljs-string">f&#x27;\tEval-<span class="hljs-subst">&#123;epoch&#125;</span>: [<span class="hljs-subst">&#123;batch_idx&#125;</span>/<span class="hljs-subst">&#123;total_iters&#125;</span>], &#x27;</span><br>                    <span class="hljs-string">f&#x27;Loss: <span class="hljs-subst">&#123;loss:<span class="hljs-number">.4</span>f&#125;</span>, Acc: <span class="hljs-subst">&#123;acc:<span class="hljs-number">.2</span>f&#125;</span>&#x27;</span><br>                )<br>        best_metric, best_epoch = saver.save_checkpoint(epoch, metric=acc)<br>    <span class="hljs-keyword">return</span> best_metric, best_epoch<br></code></pre></td></tr></table></figure>
+<h2 id="效果展示">效果展示</h2>
+<p>先用vanilla蒸馏器训一个resnet50的模型，在CIFAR10上的准确率是：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs cmd"><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">19</span>:<span class="hljs-number">49</span>,<span class="hljs-number">266</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">782</span>], Loss: Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">4771</span>, Acc: <span class="hljs-number">45</span>.<span class="hljs-number">31</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">21</span>:<span class="hljs-number">03</span>,<span class="hljs-number">699</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">500</span>/<span class="hljs-number">782</span>], Loss: Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">1073</span>, Acc: <span class="hljs-number">50</span>.<span class="hljs-number">55</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">21</span>:<span class="hljs-number">45</span>,<span class="hljs-number">498</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">781</span>/<span class="hljs-number">782</span>], Loss: Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">8323</span>, Acc: <span class="hljs-number">50</span>.<span class="hljs-number">80</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">21</span>:<span class="hljs-number">45</span>,<span class="hljs-number">614</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">10</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">157</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">5672</span>, Acc: <span class="hljs-number">43</span>.<span class="hljs-number">75</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">21</span>:<span class="hljs-number">56</span>,<span class="hljs-number">466</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">10</span>: [<span class="hljs-number">156</span>/<span class="hljs-number">157</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">7095</span>, Acc: <span class="hljs-number">46</span>.<span class="hljs-number">27</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">21</span>:<span class="hljs-number">56</span>,<span class="hljs-number">577</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:<br> (&#x27;./output/cifar10/resnet50/vanilla/teacher4/checkpoints/checkpoint-<span class="hljs-number">10</span>.pth.tar&#x27;, tensor(<span class="hljs-number">46</span>.<span class="hljs-number">2700</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br> (&#x27;./output/cifar10/resnet50/vanilla/teacher4/checkpoints/checkpoint-<span class="hljs-number">8</span>.pth.tar&#x27;, tensor(<span class="hljs-number">43</span>.<span class="hljs-number">8100</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br> (&#x27;./output/cifar10/resnet50/vanilla/teacher4/checkpoints/checkpoint-<span class="hljs-number">6</span>.pth.tar&#x27;, tensor(<span class="hljs-number">43</span>.<span class="hljs-number">7100</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">21</span>:<span class="hljs-number">56</span>,<span class="hljs-number">578</span> -                train: [    INFO] - ***** Best metric is <span class="hljs-number">46</span>.<span class="hljs-number">27</span>(<span class="hljs-number">10</span>) *****.<br></code></pre></td></tr></table></figure>
+<p>然后用上面得到的resnet50当作教师模型，用resnet18当作学生模型，使用kd蒸馏器，在CIAFR10上训练得到的准确率是：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs cmd"><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">42</span>:<span class="hljs-number">24</span>,<span class="hljs-number">718</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">782</span>], Loss: Loss_kd - <span class="hljs-number">0</span>.<span class="hljs-number">1011</span>  Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">0957</span>, Acc: <span class="hljs-number">65</span>.<span class="hljs-number">62</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">43</span>:<span class="hljs-number">12</span>,<span class="hljs-number">734</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">500</span>/<span class="hljs-number">782</span>], Loss: Loss_kd - <span class="hljs-number">0</span>.<span class="hljs-number">1041</span>  Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">2737</span>, Acc: <span class="hljs-number">52</span>.<span class="hljs-number">48</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">43</span>:<span class="hljs-number">39</span>,<span class="hljs-number">689</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">781</span>/<span class="hljs-number">782</span>], Loss: Loss_kd - <span class="hljs-number">0</span>.<span class="hljs-number">1023</span>  Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">4824</span>, Acc: <span class="hljs-number">52</span>.<span class="hljs-number">49</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">43</span>:<span class="hljs-number">39</span>,<span class="hljs-number">770</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">10</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">157</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">4355</span>, Acc: <span class="hljs-number">43</span>.<span class="hljs-number">75</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">43</span>:<span class="hljs-number">50</span>,<span class="hljs-number">011</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">10</span>: [<span class="hljs-number">156</span>/<span class="hljs-number">157</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">4721</span>, Acc: <span class="hljs-number">50</span>.<span class="hljs-number">32</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">43</span>:<span class="hljs-number">50</span>,<span class="hljs-number">066</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:<br> (&#x27;./output/cifar10/resnet18/kd/student/checkpoints/checkpoint-<span class="hljs-number">9</span>.pth.tar&#x27;, tensor(<span class="hljs-number">50</span>.<span class="hljs-number">8600</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br> (&#x27;./output/cifar10/resnet18/kd/student/checkpoints/checkpoint-<span class="hljs-number">10</span>.pth.tar&#x27;, tensor(<span class="hljs-number">50</span>.<span class="hljs-number">3200</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br> (&#x27;./output/cifar10/resnet18/kd/student/checkpoints/checkpoint-<span class="hljs-number">8</span>.pth.tar&#x27;, tensor(<span class="hljs-number">49</span>.<span class="hljs-number">8300</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">43</span>:<span class="hljs-number">50</span>,<span class="hljs-number">067</span> -                train: [    INFO] - ***** Best metric is <span class="hljs-number">50</span>.<span class="hljs-number">86</span>(<span class="hljs-number">9</span>) *****.<br></code></pre></td></tr></table></figure>
+<p>这里由于教师模型训练的epoch太少了，性能反而被学生模型超过了。如果多训练几十个epoch的话不会出现这种情况。</p>
+<p>如果不用教师模型，使用vanilla蒸馏器训练resnet18的话，准确率是：</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs cmd"><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">54</span>:<span class="hljs-number">56</span>,<span class="hljs-number">784</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">782</span>], Loss: Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">5641</span>, Acc: <span class="hljs-number">35</span>.<span class="hljs-number">94</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">55</span>:<span class="hljs-number">33</span>,<span class="hljs-number">660</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">500</span>/<span class="hljs-number">782</span>], Loss: Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">3965</span>, Acc: <span class="hljs-number">50</span>.<span class="hljs-number">48</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">55</span>:<span class="hljs-number">54</span>,<span class="hljs-number">295</span> -                train: [    INFO] - Train-<span class="hljs-number">10</span>: [<span class="hljs-number">781</span>/<span class="hljs-number">782</span>], Loss: Loss_gt - <span class="hljs-number">1</span>.<span class="hljs-number">6475</span>, Acc: <span class="hljs-number">50</span>.<span class="hljs-number">70</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">55</span>:<span class="hljs-number">54</span>,<span class="hljs-number">375</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">10</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">157</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">7138</span>, Acc: <span class="hljs-number">42</span>.<span class="hljs-number">19</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">56</span>:<span class="hljs-number">04</span>,<span class="hljs-number">871</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">10</span>: [<span class="hljs-number">156</span>/<span class="hljs-number">157</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">6181</span>, Acc: <span class="hljs-number">43</span>.<span class="hljs-number">53</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">56</span>:<span class="hljs-number">04</span>,<span class="hljs-number">924</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:<br> (&#x27;./output/cifar10/resnet18/vanilla/student/checkpoints/checkpoint-<span class="hljs-number">10</span>.pth.tar&#x27;, tensor(<span class="hljs-number">43</span>.<span class="hljs-number">5300</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br> (&#x27;./output/cifar10/resnet18/vanilla/student/checkpoints/checkpoint-<span class="hljs-number">6</span>.pth.tar&#x27;, tensor(<span class="hljs-number">43</span>.<span class="hljs-number">2800</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br> (&#x27;./output/cifar10/resnet18/vanilla/student/checkpoints/checkpoint-<span class="hljs-number">9</span>.pth.tar&#x27;, tensor(<span class="hljs-number">42</span>.<span class="hljs-number">7700</span>, device=&#x27;cuda:<span class="hljs-number">0</span>&#x27;))<br><br><span class="hljs-number">2024</span>-<span class="hljs-number">06</span>-<span class="hljs-number">24</span> <span class="hljs-number">15</span>:<span class="hljs-number">56</span>:<span class="hljs-number">04</span>,<span class="hljs-number">925</span> -                train: [    INFO] - ***** Best metric is <span class="hljs-number">43</span>.<span class="hljs-number">53</span>(<span class="hljs-number">10</span>) *****.<br></code></pre></td></tr></table></figure>
+<p>可以看到kd确实提高了学生模型的性能。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="category-chain-item">知识蒸馏</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#知识蒸馏</a>
+      
+        <a href="/tags/Knowledge-distillation/" class="print-no-link">#Knowledge distillation</a>
+      
+        <a href="/tags/PyTorch/" class="print-no-link">#PyTorch</a>
+      
+        <a href="/tags/timm/" class="print-no-link">#timm</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>第二章：基本的KD实现</div>
+      <div>http://example.com/2023/07/02/Chapter_2/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Arashi</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年7月2日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/07/18/Chapter_3/" title="第三章：解耦合知识蒸馏算法">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">第三章：解耦合知识蒸馏算法</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/06/24/Chapter_1/" title="第一章：实现基础的图像分类模型训练">
+                        <span class="hidden-mobile">第一章：实现基础的图像分类模型训练</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
   </aside>
 
 
     </div>
-
-    <div class="main-inner post posts-expand">
-
-
-  
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/07/02/Chapter_2/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Arashi">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Knowledge distillation implementation">
-      <meta itemprop="description" content="Be happy, don't worry.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="第二章：基本的KD实现 | Knowledge distillation implementation">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h1 class="post-title" itemprop="name headline">
-          第二章：基本的KD实现
-        </h1>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2023-07-02 17:13:32" itemprop="dateCreated datePublished" datetime="2023-07-02T17:13:32+09:00">2023-07-02</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2024-06-24 22:01:29" itemprop="dateModified" datetime="2024-06-24T22:01:29+09:00">2024-06-24</time>
-    </span>
-
-  
+  </div>
 </div>
 
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
         </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody"><p>本章节将正式进入知识蒸馏代码的编写部分，目标是简单复现Hinton老爷子提出的最经典的Knowledge Distillation算法。</p>
-<h2 id="导入各种库"><a href="#导入各种库" class="headerlink" title="导入各种库"></a>导入各种库</h2><p>首先导入本篇需要用到的各种库：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> argparse</span><br><span class="line"><span class="keyword">import</span> yaml</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> logging</span><br><span class="line"><span class="keyword">from</span> datetime <span class="keyword">import</span> datetime</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"><span class="keyword">from</span> torch.utils.data <span class="keyword">import</span> DataLoader</span><br><span class="line"><span class="keyword">import</span> torchvision.datasets <span class="keyword">as</span> datasets</span><br><span class="line"><span class="keyword">import</span> torchvision.transforms <span class="keyword">as</span> transform</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> timm.utils.log <span class="keyword">import</span> setup_default_logging</span><br><span class="line"><span class="keyword">from</span> timm.utils.summary <span class="keyword">import</span> get_outdir</span><br><span class="line"><span class="keyword">from</span> timm.utils.checkpoint_saver <span class="keyword">import</span> CheckpointSaver</span><br><span class="line"><span class="keyword">from</span> timm.models <span class="keyword">import</span> create_model, load_checkpoint</span><br><span class="line"><span class="keyword">from</span> distillers <span class="keyword">import</span> get_distiller</span><br></pre></td></tr></table></figure>
-
-<h2 id="初始化logging"><a href="#初始化logging" class="headerlink" title="初始化logging"></a>初始化logging</h2><p>设置logging用于输出日志信息，用法可以查看本仓库第一章。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># logger setting</span></span><br><span class="line">_logger = logging.getLogger(<span class="string">&quot;train&quot;</span>)</span><br></pre></td></tr></table></figure>
-
-<h2 id="配置参数"><a href="#配置参数" class="headerlink" title="配置参数"></a>配置参数</h2><p>相较于第一章的参数增加了蒸馏相关配置。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># configs setting</span></span><br><span class="line">parser = argparse.ArgumentParser()</span><br><span class="line">parser.add_argument(<span class="string">&quot;--model&quot;</span>, default=<span class="string">&quot;resnet18&quot;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;model name&#x27;</span>) <span class="comment"># 学生模型</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--learning-rate&quot;</span>, default=<span class="number">0.01</span>, <span class="built_in">type</span>=<span class="built_in">float</span>, <span class="built_in">help</span>=<span class="string">&#x27;learning rate&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--epochs&quot;</span>, default=<span class="number">3</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;epochs to train&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--device&quot;</span>, default=<span class="string">&quot;cuda&quot;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;training device&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--batch-size&quot;</span>, default=<span class="number">32</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;batch size&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--log-interval&quot;</span>, default=<span class="number">500</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;to print log info every designated iters&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--output&quot;</span>, default=<span class="literal">None</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;output path to save results&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--experiment&quot;</span>, default=<span class="literal">None</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;name of subfolder of outpur dir&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--num-classes&quot;</span>, default=<span class="number">10</span>, <span class="built_in">type</span>=<span class="built_in">int</span>, <span class="built_in">help</span>=<span class="string">&#x27;number of classes of the dataset&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--pretrained&quot;</span>, default=<span class="literal">False</span>, action=<span class="string">&#x27;store_true&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--dataset-download&quot;</span>, default=<span class="literal">False</span>, action=<span class="string">&#x27;store_true&#x27;</span>)</span><br><span class="line">parser.add_argument(<span class="string">&quot;--dataset&quot;</span>, default=<span class="string">&#x27;cifar10&#x27;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;support cifar10 or cifar100 now&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># distillation setting</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--distiller&quot;</span>, default=<span class="string">&#x27;vanilla&#x27;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>) <span class="comment"># 蒸馏器名字</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--teacher&quot;</span>, default=<span class="literal">None</span>, <span class="built_in">type</span>=<span class="built_in">str</span>, <span class="built_in">help</span>=<span class="string">&#x27;name of teacher model&#x27;</span>) <span class="comment"># 教师模型</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--teacher-pretrained&quot;</span>, default=<span class="literal">False</span>, action=<span class="string">&#x27;store_true&#x27;</span>) <span class="comment"># 这里激活的话会从timm搭导入在imagenet2012与训练的模型，一般用不到，除非要在imagenet2012上训练学生模型</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--teacher-weight&quot;</span>, default=<span class="string">&#x27;./weights/resnet/resnet50_cifar10.pth.tar&#x27;</span>, <span class="built_in">type</span>=<span class="built_in">str</span>,</span><br><span class="line">                    <span class="built_in">help</span>=<span class="string">&#x27;path of pre-trained teacher weight&#x27;</span>) <span class="comment"># 教师模型路径</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--kd-temperature&quot;</span>, default=<span class="number">4.</span>, <span class="built_in">type</span>=<span class="built_in">float</span>, <span class="built_in">help</span>=<span class="string">&#x27;distillation temperature&#x27;</span>) <span class="comment"># 知识蒸馏温度</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--kd-loss-weight&quot;</span>, default=<span class="number">1.</span>, <span class="built_in">type</span>=<span class="built_in">float</span>) <span class="comment"># 知识蒸馏损失系数</span></span><br><span class="line">parser.add_argument(<span class="string">&quot;--gt-loss-weight&quot;</span>, default=<span class="number">1.</span>, <span class="built_in">type</span>=<span class="built_in">float</span>) <span class="comment"># 学生损失函数系数</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="数据集准备"><a href="#数据集准备" class="headerlink" title="数据集准备"></a>数据集准备</h2><p>CIFAR10或者CIAFR100。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> args.dataset == <span class="string">&#x27;cifar10&#x27;</span>:</span><br><span class="line">    transforms = transform.Compose([</span><br><span class="line">        transform.Resize(<span class="number">224</span>),</span><br><span class="line">        transform.ToTensor(),</span><br><span class="line">        transform.Normalize(mean=(<span class="number">0.4914</span>, <span class="number">0.4822</span>, <span class="number">0.4465</span>), std=(<span class="number">0.2023</span>, <span class="number">0.1994</span>, <span class="number">0.2010</span>))</span><br><span class="line">    ])</span><br><span class="line">    train_dataset = datasets.CIFAR10(root=<span class="string">&quot;datasets&quot;</span>, train=<span class="literal">True</span>, transform=transforms,</span><br><span class="line">                                     download=args.dataset_download)</span><br><span class="line">    eval_dataset = datasets.CIFAR10(root=<span class="string">&quot;datasets&quot;</span>, train=<span class="literal">False</span>, transform=transforms,</span><br><span class="line">                                    download=args.dataset_download)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    transforms = transform.Compose([</span><br><span class="line">        transform.Resize(<span class="number">224</span>),</span><br><span class="line">        transform.ToTensor(),</span><br><span class="line">        transform.Normalize(mean=((<span class="number">0.5071</span>, <span class="number">0.4867</span>, <span class="number">0.4408</span>)), std=(<span class="number">0.2675</span>, <span class="number">0.2565</span>, <span class="number">0.2761</span>))</span><br><span class="line">    ])</span><br><span class="line">    train_dataset = datasets.CIFAR100(root=<span class="string">&quot;datasets&quot;</span>, train=<span class="literal">True</span>, transform=transforms,</span><br><span class="line">                                      download=args.dataset_download)</span><br><span class="line">    eval_dataset = datasets.CIFAR100(root=<span class="string">&quot;datasets&quot;</span>, train=<span class="literal">False</span>, transform=transforms,</span><br><span class="line">                                     download=args.dataset_download)</span><br><span class="line">    <span class="comment"># create dataloader</span></span><br><span class="line">    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=<span class="literal">True</span>)</span><br><span class="line">    eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
-
-<h2 id="模型准备"><a href="#模型准备" class="headerlink" title="模型准备"></a>模型准备</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># create model</span></span><br><span class="line">model = create_model(args.model, pretrained=args.pretrained, num_classes=args.num_classes)</span><br><span class="line"></span><br><span class="line"><span class="comment"># create teacher model</span></span><br><span class="line">teacher = <span class="literal">None</span></span><br><span class="line"><span class="keyword">if</span> args.teacher:</span><br><span class="line">    teacher = create_model(args.teacher, pretrained=args.teacher_pretrained, num_classes=args.num_classes)</span><br><span class="line">    <span class="keyword">if</span> args.teacher_weight:</span><br><span class="line">        load_checkpoint(teacher, args.teacher_weight)</span><br><span class="line">    teacher.requires_grad_(<span class="literal">False</span>)</span><br><span class="line">    teacher.<span class="built_in">eval</span>()</span><br><span class="line"></span><br><span class="line"><span class="comment"># create optimizer</span></span><br><span class="line">loss_func = nn.CrossEntropyLoss()</span><br></pre></td></tr></table></figure>
-
-<h2 id="蒸馏器准备"><a href="#蒸馏器准备" class="headerlink" title="蒸馏器准备"></a>蒸馏器准备</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># create distiller</span></span><br><span class="line">Distiller = get_distiller(args.distiller.lower())</span><br><span class="line">distiller = Distiller(model, teacher, loss_func, args)</span><br><span class="line">distiller.to(device)</span><br><span class="line">optimizer = torch.optim.SGD(distiller.parameters(), lr=args.learning_rate)</span><br></pre></td></tr></table></figure>
-
-<p>这段代码中使用的get_distiller和Distiller来自于自定义的函数和类。</p>
-<p>具体的做法是，在train.py下新建文件夹distillers，在distillers文件夹中新建registry.py文件并添加以下代码：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> defaultdict</span><br><span class="line"></span><br><span class="line">_distiller_dict = defaultdict()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 这个函数会被用作装饰器，将定义好的蒸馏器类加入到_distiller_dict中，方便后续获取</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">register_distiller</span>(<span class="params">distiller</span>):</span><br><span class="line">    distiller_name = distiller.__name__.lower()</span><br><span class="line">    _distiller_dict[distiller_name] = distiller</span><br><span class="line">    <span class="keyword">return</span> distiller</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通过名字获取对应蒸馏器的类</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_distiller</span>(<span class="params">distiller_name</span>):</span><br><span class="line">    <span class="keyword">return</span> _distiller_dict[distiller_name]</span><br></pre></td></tr></table></figure>
-
-<p>继续在distillers文件夹中添加文件distillation_losses.py：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 这是基本kd算法中损失函数的实现，后续在这个文件中还会补充其他的损失函数</span></span><br><span class="line"><span class="keyword">import</span> torch.nn.functional <span class="keyword">as</span> F</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">kd_loss</span>(<span class="params">logits_student, logits_teacher, kd_temperature</span>):</span><br><span class="line">    log_pred_student = F.log_softmax(logits_student / kd_temperature, dim=<span class="number">1</span>)</span><br><span class="line">    pred_teacher = F.softmax(logits_teacher / kd_temperature, dim=<span class="number">1</span>)</span><br><span class="line">    loss_kd = F.kl_div(log_pred_student, pred_teacher, reduction=<span class="string">&#x27;batchmean&#x27;</span>)</span><br><span class="line">    loss_kd *= kd_temperature ** <span class="number">2</span></span><br><span class="line">    <span class="keyword">return</span> loss_kd</span><br></pre></td></tr></table></figure>
-
-<p>继续在distillers文件夹中添加文件_base.py：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 实现一个基础的蒸馏器类，后续所有的蒸馏器都继承于此类</span></span><br><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">BaseDistiller</span>(nn.Module):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, student, teacher, criterion, args</span>):</span><br><span class="line">        <span class="built_in">super</span>(BaseDistiller, self).__init__()</span><br><span class="line">        self.student = student</span><br><span class="line">        self.teacher = teacher</span><br><span class="line">        self.criterion = criterion</span><br><span class="line">        self.args = args</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, x</span>):</span><br><span class="line">        <span class="keyword">raise</span> NotImplementedError</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">compute_parameters</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">        这个函数用来统计参数</span></span><br><span class="line"><span class="string">        &quot;&quot;&quot;</span></span><br><span class="line">        student_params = <span class="number">0</span></span><br><span class="line">        teacher_params = <span class="number">0</span></span><br><span class="line">        extra_params = <span class="number">0</span></span><br><span class="line">        <span class="keyword">for</span> n, p <span class="keyword">in</span> self.named_parameters():</span><br><span class="line">            <span class="keyword">if</span> n.startswith(<span class="string">&#x27;student&#x27;</span>):</span><br><span class="line">                student_params += p.numel()</span><br><span class="line">            <span class="keyword">elif</span> n.startswith(<span class="string">&#x27;teacher&#x27;</span>):</span><br><span class="line">                teacher_params += p.numel()</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                <span class="keyword">if</span> p.requires_grad:</span><br><span class="line">                    extra_params += p.numel()</span><br><span class="line">        <span class="keyword">return</span> student_params, teacher_params, extra_params</span><br></pre></td></tr></table></figure>
-
-<p>继续在distillers文件夹中添加文件kd.py：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 实现KD类</span></span><br><span class="line"><span class="keyword">from</span> .distillation_losses <span class="keyword">import</span> kd_loss</span><br><span class="line"><span class="keyword">from</span> ._base <span class="keyword">import</span> BaseDistiller</span><br><span class="line"><span class="keyword">from</span> .registry <span class="keyword">import</span> register_distiller</span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@register_distiller </span><span class="comment"># 用装饰器将这个类记录下来</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">KD</span>(<span class="title class_ inherited__">BaseDistiller</span>):</span><br><span class="line">    requires_feature = <span class="literal">False</span> <span class="comment"># 这个参数指示不需要中间层特征</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, student, teacher, criterion, args</span>):</span><br><span class="line">        <span class="built_in">super</span>(KD, self).__init__(student, teacher, criterion, args)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, image, label</span>):</span><br><span class="line">        <span class="keyword">with</span> torch.no_grad():</span><br><span class="line">            self.teacher.<span class="built_in">eval</span>()</span><br><span class="line">            logits_teacher = self.teacher(image)</span><br><span class="line">        logits_student = self.student(image)</span><br><span class="line">        loss_kd = self.args.kd_loss_weight * kd_loss(logits_student, logits_teacher, self.args.kd_temperature)</span><br><span class="line">        loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)</span><br><span class="line">        losses_dict = &#123;</span><br><span class="line">            <span class="string">&#x27;loss_kd&#x27;</span>: loss_kd,</span><br><span class="line">            <span class="string">&#x27;loss_gt&#x27;</span>: loss_gt</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> logits_student, losses_dict</span><br></pre></td></tr></table></figure>
-
-<p>继续在distillers文件夹中添加文件vanilla.py：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 为了让train.py代码结构统一起来，把非蒸馏的普通训练也写成一个类</span></span><br><span class="line"><span class="keyword">from</span> ._base <span class="keyword">import</span> BaseDistiller</span><br><span class="line"><span class="keyword">from</span> .registry <span class="keyword">import</span> register_distiller</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@register_distiller</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Vanilla</span>(<span class="title class_ inherited__">BaseDistiller</span>):</span><br><span class="line">    requires_feature = <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, student, teacher, criterion, args</span>):</span><br><span class="line">        <span class="built_in">super</span>(Vanilla, self).__init__(student, teacher, criterion, args)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">forward</span>(<span class="params">self, image, label</span>):</span><br><span class="line">        logits_student = self.student(image)</span><br><span class="line">        loss_gt = self.criterion(logits_student, label)</span><br><span class="line">        losses_dict = &#123;</span><br><span class="line">            <span class="string">&#x27;loss_gt&#x27;</span>: loss_gt</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> logits_student, losses_dict</span><br></pre></td></tr></table></figure>
-
-<p>最后在distillers文件夹中添加文件__init__.py：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 如果后面定义类新的类，这里需要再添加条目</span></span><br><span class="line"><span class="keyword">from</span> .vanilla <span class="keyword">import</span> Vanilla</span><br><span class="line"><span class="keyword">from</span> .kd <span class="keyword">import</span> KD</span><br><span class="line"><span class="keyword">from</span> .distillation_losses <span class="keyword">import</span> kd_loss</span><br><span class="line"><span class="keyword">from</span> .registry <span class="keyword">import</span> get_distiller</span><br></pre></td></tr></table></figure>
-
-<h2 id="主函数的剩余部分"><a href="#主函数的剩余部分" class="headerlink" title="主函数的剩余部分"></a>主函数的剩余部分</h2><p>一部分是路径、logger、device等的设置：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># process args and some paths</span></span><br><span class="line">args = parser.parse_args()</span><br><span class="line">args_text = yaml.safe_dump(args.__dict__, default_flow_style=<span class="literal">False</span>)</span><br><span class="line">output_path = args.output <span class="keyword">if</span> args.output <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span> <span class="keyword">else</span> <span class="string">&#x27;./output/train&#x27;</span></span><br><span class="line"><span class="keyword">if</span> args.experiment:</span><br><span class="line">    exp_name = args.experiment</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    exp_name = <span class="string">&#x27;-&#x27;</span>.join([</span><br><span class="line">        datetime.now().strftime(<span class="string">&quot;%Y%m%d-%H%M%S&quot;</span>),</span><br><span class="line">        args.model</span><br><span class="line">    ])</span><br><span class="line">output_dir = get_outdir(output_path, exp_name)</span><br><span class="line">log_path = os.path.join(output_dir, <span class="string">&#x27;train.log&#x27;</span>)</span><br><span class="line">checkpoint_dir = os.path.join(output_dir, <span class="string">&#x27;checkpoints&#x27;</span>)</span><br><span class="line">os.makedirs(checkpoint_dir)</span><br><span class="line"></span><br><span class="line"><span class="comment"># setup logging</span></span><br><span class="line">setup_default_logging(log_path=log_path)</span><br><span class="line"></span><br><span class="line"><span class="comment"># choose device</span></span><br><span class="line">device = torch.device(<span class="string">&quot;cuda&quot;</span> <span class="keyword">if</span> torch.cuda.is_available() <span class="keyword">else</span> <span class="string">&quot;cpu&quot;</span>)</span><br></pre></td></tr></table></figure>
-
-<p>一部分是训练和验证的内容：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Train and validation</span></span><br><span class="line">total_train_iters = <span class="built_in">len</span>(train_loader)</span><br><span class="line">total_eval_iters = <span class="built_in">len</span>(eval_loader)</span><br><span class="line">best_metric = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line">saver = CheckpointSaver(</span><br><span class="line">    model=model,</span><br><span class="line">    optimizer=optimizer,</span><br><span class="line">    args=args,</span><br><span class="line">    checkpoint_dir=checkpoint_dir,</span><br><span class="line">    recovery_dir=checkpoint_dir,</span><br><span class="line">    decreasing=<span class="literal">False</span>,</span><br><span class="line">    max_history=<span class="number">3</span></span><br><span class="line">)</span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(os.path.join(output_dir, <span class="string">&#x27;args.yaml&#x27;</span>), <span class="string">&#x27;w&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    f.write(args_text)</span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, args.epochs + <span class="number">1</span>):</span><br><span class="line">        train(epoch=epoch,</span><br><span class="line">              distiller=distiller,</span><br><span class="line">              loader=train_loader,</span><br><span class="line">              optimizer=optimizer,</span><br><span class="line">              args=args,</span><br><span class="line">              device=device,</span><br><span class="line">              total_iters=total_train_iters)</span><br><span class="line"></span><br><span class="line">        best_metric, best_epoch = <span class="built_in">eval</span>(epoch=epoch,</span><br><span class="line">                                       model=model,</span><br><span class="line">                                       loader=eval_loader,</span><br><span class="line">                                       args=args,</span><br><span class="line">                                       device=device,</span><br><span class="line">                                       total_iters=total_eval_iters,</span><br><span class="line">                                       loss_func=loss_func,</span><br><span class="line">                                       saver=saver)</span><br><span class="line"></span><br><span class="line"><span class="keyword">except</span> KeyboardInterrupt:</span><br><span class="line">    <span class="keyword">pass</span></span><br><span class="line"><span class="keyword">if</span> best_metric <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">    _logger.info(<span class="string">f&#x27;***** Best metric is <span class="subst">&#123;best_metric:<span class="number">.2</span>f&#125;</span>(<span class="subst">&#123;best_epoch&#125;</span>) *****.&#x27;</span>)</span><br></pre></td></tr></table></figure>
-
-<h2 id="训练和验证函数"><a href="#训练和验证函数" class="headerlink" title="训练和验证函数"></a>训练和验证函数</h2><p>为了让主函数看起来更加清晰和美观一点，把训练和验证的代码单独写一个新的函数。</p>
-<h3 id="训练函数"><a href="#训练函数" class="headerlink" title="训练函数"></a>训练函数</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">train</span>(<span class="params">epoch, distiller, loader, optimizer, args, device, total_iters</span>):</span><br><span class="line">    correct = <span class="number">0</span></span><br><span class="line">    total = <span class="number">0</span></span><br><span class="line">    distiller.train()</span><br><span class="line">    <span class="keyword">for</span> batch_idx, (images, labels) <span class="keyword">in</span> <span class="built_in">enumerate</span>(loader):</span><br><span class="line">        image = images.to(device)</span><br><span class="line">        labels = labels.to(device)</span><br><span class="line">        logits_student, losses_dict = distiller(image, labels)</span><br><span class="line">        loss = <span class="built_in">sum</span>(losses_dict.values())</span><br><span class="line">        preds = torch.argmax(logits_student.detach(), dim=<span class="number">1</span>)</span><br><span class="line">        correct += (preds == labels).<span class="built_in">sum</span>()</span><br><span class="line">        total += preds.shape[<span class="number">0</span>]</span><br><span class="line">        acc = <span class="number">100.0</span> * correct / total</span><br><span class="line">        <span class="keyword">if</span> batch_idx % args.log_interval == <span class="number">0</span> <span class="keyword">or</span> batch_idx == total_iters - <span class="number">1</span>:</span><br><span class="line">            losses_infos = []</span><br><span class="line">            <span class="keyword">for</span> k, v <span class="keyword">in</span> losses_dict.items():</span><br><span class="line">                info = <span class="string">f&#x27;<span class="subst">&#123;k.capitalize()&#125;</span> - <span class="subst">&#123;v.item():<span class="number">.4</span>f&#125;</span>&#x27;</span></span><br><span class="line">                losses_infos.append(info)</span><br><span class="line">            losses_info = <span class="string">&#x27;  &#x27;</span>.join(losses_infos)</span><br><span class="line">            _logger.info(</span><br><span class="line">                <span class="string">f&#x27;Train-<span class="subst">&#123;epoch&#125;</span>: [<span class="subst">&#123;batch_idx&#125;</span>/<span class="subst">&#123;total_iters&#125;</span>], &#x27;</span></span><br><span class="line">                <span class="string">f&#x27;Loss: <span class="subst">&#123;losses_info&#125;</span>, Acc: <span class="subst">&#123;acc:<span class="number">.2</span>f&#125;</span>&#x27;</span></span><br><span class="line">            )</span><br><span class="line">        optimizer.zero_grad()</span><br><span class="line">        loss.backward()</span><br><span class="line">        optimizer.step()</span><br></pre></td></tr></table></figure>
-
-<h3 id="验证函数"><a href="#验证函数" class="headerlink" title="验证函数"></a>验证函数</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">eval</span>(<span class="params">epoch, model, loader, args, device, total_iters, loss_func, saver</span>):</span><br><span class="line">    <span class="keyword">with</span> torch.no_grad():</span><br><span class="line">        model.<span class="built_in">eval</span>()</span><br><span class="line">        correct = <span class="number">0</span></span><br><span class="line">        total = <span class="number">0</span></span><br><span class="line">        <span class="keyword">for</span> batch_idx, (image, labels) <span class="keyword">in</span> <span class="built_in">enumerate</span>(loader):</span><br><span class="line">            image = image.to(device)</span><br><span class="line">            labels = labels.to(device)</span><br><span class="line">            preds = model(image)</span><br><span class="line">            loss = loss_func(preds, labels)</span><br><span class="line">            pred_labels = torch.argmax(preds, dim=<span class="number">1</span>)</span><br><span class="line">            correct += (pred_labels == labels).<span class="built_in">sum</span>()</span><br><span class="line">            total += pred_labels.shape[<span class="number">0</span>]</span><br><span class="line">            acc = <span class="number">100.0</span> * correct / total</span><br><span class="line">            <span class="keyword">if</span> batch_idx % args.log_interval == <span class="number">0</span> <span class="keyword">or</span> batch_idx == total_iters - <span class="number">1</span>:</span><br><span class="line">                _logger.info(</span><br><span class="line">                    <span class="string">f&#x27;\tEval-<span class="subst">&#123;epoch&#125;</span>: [<span class="subst">&#123;batch_idx&#125;</span>/<span class="subst">&#123;total_iters&#125;</span>], &#x27;</span></span><br><span class="line">                    <span class="string">f&#x27;Loss: <span class="subst">&#123;loss:<span class="number">.4</span>f&#125;</span>, Acc: <span class="subst">&#123;acc:<span class="number">.2</span>f&#125;</span>&#x27;</span></span><br><span class="line">                )</span><br><span class="line">        best_metric, best_epoch = saver.save_checkpoint(epoch, metric=acc)</span><br><span class="line">    <span class="keyword">return</span> best_metric, best_epoch</span><br></pre></td></tr></table></figure>
-
-<h2 id="效果展示"><a href="#效果展示" class="headerlink" title="效果展示"></a>效果展示</h2><p>先用vanilla蒸馏器训一个resnet50的模型，在CIFAR10上的准确率是：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">19</span>:<span class="number">49</span>,<span class="number">266</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">0</span>/<span class="number">782</span>], Loss: Loss_gt - <span class="number">1</span>.<span class="number">4771</span>, Acc: <span class="number">45</span>.<span class="number">31</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">21</span>:<span class="number">03</span>,<span class="number">699</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">500</span>/<span class="number">782</span>], Loss: Loss_gt - <span class="number">1</span>.<span class="number">1073</span>, Acc: <span class="number">50</span>.<span class="number">55</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">21</span>:<span class="number">45</span>,<span class="number">498</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">781</span>/<span class="number">782</span>], Loss: Loss_gt - <span class="number">1</span>.<span class="number">8323</span>, Acc: <span class="number">50</span>.<span class="number">80</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">21</span>:<span class="number">45</span>,<span class="number">614</span> -                train: [    INFO] - 	Eval-<span class="number">10</span>: [<span class="number">0</span>/<span class="number">157</span>], Loss: <span class="number">1</span>.<span class="number">5672</span>, Acc: <span class="number">43</span>.<span class="number">75</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">21</span>:<span class="number">56</span>,<span class="number">466</span> -                train: [    INFO] - 	Eval-<span class="number">10</span>: [<span class="number">156</span>/<span class="number">157</span>], Loss: <span class="number">1</span>.<span class="number">7095</span>, Acc: <span class="number">46</span>.<span class="number">27</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">21</span>:<span class="number">56</span>,<span class="number">577</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:</span><br><span class="line"> (&#x27;./output/cifar10/resnet50/vanilla/teacher4/checkpoints/checkpoint-<span class="number">10</span>.pth.tar&#x27;, tensor(<span class="number">46</span>.<span class="number">2700</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/cifar10/resnet50/vanilla/teacher4/checkpoints/checkpoint-<span class="number">8</span>.pth.tar&#x27;, tensor(<span class="number">43</span>.<span class="number">8100</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/cifar10/resnet50/vanilla/teacher4/checkpoints/checkpoint-<span class="number">6</span>.pth.tar&#x27;, tensor(<span class="number">43</span>.<span class="number">7100</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">21</span>:<span class="number">56</span>,<span class="number">578</span> -                train: [    INFO] - ***** Best metric is <span class="number">46</span>.<span class="number">27</span>(<span class="number">10</span>) *****.</span><br></pre></td></tr></table></figure>
-
-<p>然后用上面得到的resnet50当作教师模型，用resnet18当作学生模型，使用kd蒸馏器，在CIAFR10上训练得到的准确率是：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">42</span>:<span class="number">24</span>,<span class="number">718</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">0</span>/<span class="number">782</span>], Loss: Loss_kd - <span class="number">0</span>.<span class="number">1011</span>  Loss_gt - <span class="number">1</span>.<span class="number">0957</span>, Acc: <span class="number">65</span>.<span class="number">62</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">43</span>:<span class="number">12</span>,<span class="number">734</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">500</span>/<span class="number">782</span>], Loss: Loss_kd - <span class="number">0</span>.<span class="number">1041</span>  Loss_gt - <span class="number">1</span>.<span class="number">2737</span>, Acc: <span class="number">52</span>.<span class="number">48</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">43</span>:<span class="number">39</span>,<span class="number">689</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">781</span>/<span class="number">782</span>], Loss: Loss_kd - <span class="number">0</span>.<span class="number">1023</span>  Loss_gt - <span class="number">1</span>.<span class="number">4824</span>, Acc: <span class="number">52</span>.<span class="number">49</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">43</span>:<span class="number">39</span>,<span class="number">770</span> -                train: [    INFO] - 	Eval-<span class="number">10</span>: [<span class="number">0</span>/<span class="number">157</span>], Loss: <span class="number">1</span>.<span class="number">4355</span>, Acc: <span class="number">43</span>.<span class="number">75</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">43</span>:<span class="number">50</span>,<span class="number">011</span> -                train: [    INFO] - 	Eval-<span class="number">10</span>: [<span class="number">156</span>/<span class="number">157</span>], Loss: <span class="number">1</span>.<span class="number">4721</span>, Acc: <span class="number">50</span>.<span class="number">32</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">43</span>:<span class="number">50</span>,<span class="number">066</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:</span><br><span class="line"> (&#x27;./output/cifar10/resnet18/kd/student/checkpoints/checkpoint-<span class="number">9</span>.pth.tar&#x27;, tensor(<span class="number">50</span>.<span class="number">8600</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/cifar10/resnet18/kd/student/checkpoints/checkpoint-<span class="number">10</span>.pth.tar&#x27;, tensor(<span class="number">50</span>.<span class="number">3200</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/cifar10/resnet18/kd/student/checkpoints/checkpoint-<span class="number">8</span>.pth.tar&#x27;, tensor(<span class="number">49</span>.<span class="number">8300</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">43</span>:<span class="number">50</span>,<span class="number">067</span> -                train: [    INFO] - ***** Best metric is <span class="number">50</span>.<span class="number">86</span>(<span class="number">9</span>) *****.</span><br></pre></td></tr></table></figure>
-
-<p>这里由于教师模型训练的epoch太少了，性能反而被学生模型超过了。如果多训练几十个epoch的话不会出现这种情况。</p>
-<p>如果不用教师模型，使用vanilla蒸馏器训练resnet18的话，准确率是：</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">54</span>:<span class="number">56</span>,<span class="number">784</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">0</span>/<span class="number">782</span>], Loss: Loss_gt - <span class="number">1</span>.<span class="number">5641</span>, Acc: <span class="number">35</span>.<span class="number">94</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">55</span>:<span class="number">33</span>,<span class="number">660</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">500</span>/<span class="number">782</span>], Loss: Loss_gt - <span class="number">1</span>.<span class="number">3965</span>, Acc: <span class="number">50</span>.<span class="number">48</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">55</span>:<span class="number">54</span>,<span class="number">295</span> -                train: [    INFO] - Train-<span class="number">10</span>: [<span class="number">781</span>/<span class="number">782</span>], Loss: Loss_gt - <span class="number">1</span>.<span class="number">6475</span>, Acc: <span class="number">50</span>.<span class="number">70</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">55</span>:<span class="number">54</span>,<span class="number">375</span> -                train: [    INFO] - 	Eval-<span class="number">10</span>: [<span class="number">0</span>/<span class="number">157</span>], Loss: <span class="number">1</span>.<span class="number">7138</span>, Acc: <span class="number">42</span>.<span class="number">19</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">56</span>:<span class="number">04</span>,<span class="number">871</span> -                train: [    INFO] - 	Eval-<span class="number">10</span>: [<span class="number">156</span>/<span class="number">157</span>], Loss: <span class="number">1</span>.<span class="number">6181</span>, Acc: <span class="number">43</span>.<span class="number">53</span></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">56</span>:<span class="number">04</span>,<span class="number">924</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:</span><br><span class="line"> (&#x27;./output/cifar10/resnet18/vanilla/student/checkpoints/checkpoint-<span class="number">10</span>.pth.tar&#x27;, tensor(<span class="number">43</span>.<span class="number">5300</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/cifar10/resnet18/vanilla/student/checkpoints/checkpoint-<span class="number">6</span>.pth.tar&#x27;, tensor(<span class="number">43</span>.<span class="number">2800</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"> (&#x27;./output/cifar10/resnet18/vanilla/student/checkpoints/checkpoint-<span class="number">9</span>.pth.tar&#x27;, tensor(<span class="number">42</span>.<span class="number">7700</span>, device=&#x27;cuda:<span class="number">0</span>&#x27;))</span><br><span class="line"></span><br><span class="line"><span class="number">2024</span>-<span class="number">06</span>-<span class="number">24</span> <span class="number">15</span>:<span class="number">56</span>:<span class="number">04</span>,<span class="number">925</span> -                train: [    INFO] - ***** Best metric is <span class="number">43</span>.<span class="number">53</span>(<span class="number">10</span>) *****.</span><br></pre></td></tr></table></figure>
-
-<p>可以看到kd确实提高了学生模型的性能。</p>
-
+        <div class="list-group" id="local-search-result"></div>
+      </div>
     </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-
-        
-
-          <div class="post-nav">
-            <div class="post-nav-item">
-                <a href="/2023/06/24/Chapter_1/" rel="prev" title="第一章：实现基础的图像分类模型训练">
-                  <i class="fa fa-angle-left"></i> 第一章：实现基础的图像分类模型训练
-                </a>
-            </div>
-            <div class="post-nav-item">
-            </div>
-          </div>
-    </footer>
-  </article>
+  </div>
 </div>
 
+    
 
-
-
-
-
-</div>
+    
   </main>
 
-  <footer class="footer">
+  <footer>
     <div class="footer-inner">
-
-  <div class="copyright">
-    &copy; 
-    <span itemprop="copyrightYear">2024</span>
-    <span class="with-love">
-      <i class="fa fa-heart"></i>
-    </span>
-    <span class="author" itemprop="copyrightHolder">Arashi</span>
-  </div>
-  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
-  </div>
-
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
     </div>
+  
+  
+  
+  
+</div>
+
   </footer>
 
+  <!-- Scripts -->
   
-  <div class="toggle sidebar-toggle" role="button">
-    <span class="toggle-line"></span>
-    <span class="toggle-line"></span>
-    <span class="toggle-line"></span>
-  </div>
-  <div class="sidebar-dimmer"></div>
-  <div class="back-to-top" role="button" aria-label="Back to top">
-    <i class="fa fa-arrow-up fa-lg"></i>
-    <span>0%</span>
-  </div>
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
 
-<noscript>
-  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
-</noscript>
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
 
 
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
-<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
-
-  
-
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
 
 
 
 
 
   
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
 
 
 
 
 
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
 </body>
 </html>

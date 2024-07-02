@@ -1,0 +1,746 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=dark>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.ico">
+  <link rel="icon" href="/img/myfavicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Arashi">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="这次要实现解耦合知识蒸馏算法。 原文简单介绍 DKD算法的全称是Decoupled Knowledge Distillation，中文就是解耦合知识蒸馏算法，论文链接：2203.08679 (arxiv.org)。 所谓的解耦合是将原版KD中的蒸馏损失函数进行了重构，划分成了目标类（Target class）和非目标类（Non-target classes）两个部分，分别对两部分赋予不">
+<meta property="og:type" content="article">
+<meta property="og:title" content="第三章：解耦合知识蒸馏算法">
+<meta property="og:url" content="http://example.com/2023/07/18/Chapter_3/index.html">
+<meta property="og:site_name" content="Knowledge distillation implementation">
+<meta property="og:description" content="这次要实现解耦合知识蒸馏算法。 原文简单介绍 DKD算法的全称是Decoupled Knowledge Distillation，中文就是解耦合知识蒸馏算法，论文链接：2203.08679 (arxiv.org)。 所谓的解耦合是将原版KD中的蒸馏损失函数进行了重构，划分成了目标类（Target class）和非目标类（Non-target classes）两个部分，分别对两部分赋予不">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-07-18T02:19:56.000Z">
+<meta property="article:modified_time" content="2024-07-01T09:53:00.055Z">
+<meta property="article:author" content="Arashi">
+<meta property="article:tag" content="知识蒸馏">
+<meta property="article:tag" content="PyTorch">
+<meta property="article:tag" content="timm">
+<meta property="article:tag" content="Decoupled knowledge distillation">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>第三章：解耦合知识蒸馏算法 - Knowledge distillation implementation</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/custom.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.7","typing":{"enable":false,"typeSpeed":70,"cursorChar":"","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"gtag":null},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 30vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>ARASHI&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('https://cdn.jsdelivr.net/gh/fanlumaster/BlogMaps@master/blogs/pictures/78316639_p02.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle">第三章：解耦合知识蒸馏算法</span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-07-18 11:19" pubdate>
+          2023年7月18日 上午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          17 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">第三章：解耦合知识蒸馏算法</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>这次要实现解耦合知识蒸馏算法。</p>
+<h2 id="原文简单介绍">原文简单介绍</h2>
+<p>DKD算法的全称是Decoupled Knowledge
+Distillation，中文就是解耦合知识蒸馏算法，论文链接：<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/2203.08679">2203.08679 (arxiv.org)</a>。</p>
+<p>所谓的解耦合是将原版KD中的蒸馏损失函数进行了重构，划分成了目标类（Target
+class）和非目标类（Non-target
+classes）两个部分，分别对两部分赋予不同的系数可以帮助网络更加关注某一部分。</p>
+<p>一般的softmax函数为 <span class="math display">\[
+p_i=\frac{exp(z_i)}{\sum^C_{j=1}exp(z_j)}
+\]</span> 可以根据Target class和Non-target class将其划分为两个部分 <span
+class="math display">\[
+p_t=\frac{exp(z_t)}{\sum^C_{j=1}exp(z_j)},
+p_{\backslash{t}}=\frac{\sum^C_{k=1,k\neq{t}}exp(z_k)}{\sum^C_{j=1}exp(z_j)}
+\]</span> 此外，在所有的非目标类别中，再单独定义一个softmax函数 <span
+class="math display">\[
+\hat{p_i}=\frac{exp(z_i)}{\sum^C_{j=1,j\neq{t}}exp(z_j)}
+\]</span> 根据上述公式，可以得到 <span class="math display">\[
+\hat{p}_i=p_i/p_{\backslash{t}}
+\]</span>
+原本的KD算法中，使用KL散度作为蒸馏损失函数，同样也可以将这一部分的损失函数划分为两个部分
+<span class="math display">\[
+KD=KL(\mathbf{p}^T||\mathbf{p}^S)=p^T_tlog(\frac{p^T_t}{p^S_t})+\sum^C_{i=1,i\neq{t}}p^T_tlog(\frac{p^T_i}{p^S_i})
+\]</span> 根据上式进一步重构 <span class="math display">\[
+\begin{align*}
+KD&amp;=p^T_tlog(\frac{p^T_t}{p^S_t})+\sum^C_{i=1,i\neq{t}}(\hat{p}^T_ip^T_{\backslash{t}})log(\frac{\hat{p}^T_ip^T_{\backslash{t}}}{\hat{p}^S_ip^S_{\backslash{t}}})\\
+&amp;=p^T_tlog(\frac{p^T_t}{p^S_t})+p^T_{\backslash{t}}\sum^C_{i=1,i\neq{t}}\hat{p}^T_ilog(\frac{\hat{p}^T_i}{\hat{p}^S_i})+p^T_{\backslash{t}}\sum^C_{i=1,i\neq{t}}\hat{p}^T_ilog(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})
+\end{align*}
+\]</span> 因为<span
+class="math inline">\(log(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})\)</span>与<span
+class="math inline">\(i\)</span>无关，所以其实<span
+class="math inline">\(\sum^C_{i=1,i\neq{t}}\hat{p}^T_ilog(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})=log(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})\)</span>，上式变成
+<span class="math display">\[
+KD=p^T_tlog(\frac{p^T_t}{p^S_t})+p^T_{\backslash{t}}log(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})+p^T_{\backslash{t}}\sum^C_{i=1,i\neq{t}}\hat{p}^T_ilog(\frac{\hat{p}^T_i}{\hat{p}^S_i})
+\]</span>
+前两项看作目标类的KL损失，后一项看作非目标类的KL损失，则最后的蒸馏损失函数可以变成
+<span class="math display">\[
+KD=TCKD+(1-p^T_t)NCKD
+\]</span> TCKD（Target Class Knowledge Distillation），NCKD（Non-target
+Class Knowledge
+Distillation）。到这一步，损失计算与原本并无区别。主要的区别在于，作者加入了两个超参数形成最后的损失函数，从而可以调节目标类别和非目标类别对蒸馏的重要程度。
+<span class="math display">\[
+KD=\alpha{TCKD}+\beta{NCKD}
+\]</span></p>
+<h2 id="dkd损失函数实现">DKD损失函数实现</h2>
+<p>在distillation_losses.py文件中添加dkd_loss函数。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">dkd_loss</span>(<span class="hljs-params">logits_student, logits_teacher, label, alpha, beta, kd_temperature</span>):<br>    gt_mask, other_mask = _get_mask(logits_student, label)<br>    <span class="hljs-comment"># 对应公式中的TCKD部分</span><br>    pred_student = F.softmax(logits_student / kd_temperature, dim=<span class="hljs-number">1</span>) <span class="hljs-comment"># temperatur和DKD的损失计算不冲突</span><br>    pred_teacher = F.softmax(logits_teacher / kd_temperature, dim=<span class="hljs-number">1</span>)<br>    pred_student = cat_mask(pred_student, gt_mask, other_mask)<br>    pred_teacher = cat_mask(pred_teacher, gt_mask, other_mask)<br>    log_pred_student = torch.log(pred_student)<br>    tckd_loss = F.kl_div(log_pred_student, pred_teacher, reduction=<span class="hljs-string">&#x27;batchmean&#x27;</span>) * (kd_temperature ** <span class="hljs-number">2</span>)<br>    <span class="hljs-comment"># 对应公式中的NCKD部分</span><br>    pred_teacher_second = F.softmax(logits_teacher / kd_temperature - <span class="hljs-number">1000.0</span> * gt_mask, dim=<span class="hljs-number">1</span>)  <span class="hljs-comment"># 让target类别的分数趋近0</span><br>    log_pred_student_second = F.log_softmax(logits_student / kd_temperature - <span class="hljs-number">1000.0</span> * gt_mask, dim=<span class="hljs-number">1</span>)<br>    nckd_loss = F.kl_div(log_pred_student_second, pred_teacher_second, reduction=<span class="hljs-string">&#x27;batchmean&#x27;</span>) * (kd_temperature ** <span class="hljs-number">2</span>)<br>    <span class="hljs-keyword">return</span> alpha * tckd_loss + beta * nckd_loss<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">_get_mask</span>(<span class="hljs-params">logits, label</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">    这个函数主要是对目标类别和非目标类别分别生成mask</span><br><span class="hljs-string">    &quot;&quot;&quot;</span><br>    target = label.reshape(-<span class="hljs-number">1</span>)<br>    target = target.unsqueeze(<span class="hljs-number">1</span>)<br>    other_mask = torch.ones_like(logits).scatter_(<span class="hljs-number">1</span>, target, <span class="hljs-number">0</span>).<span class="hljs-built_in">bool</span>()  <span class="hljs-comment"># 1 for non-target classes</span><br>    gt_mask = torch.zeros_like(logits).scatter_(<span class="hljs-number">1</span>, target, <span class="hljs-number">1</span>).<span class="hljs-built_in">bool</span>()  <span class="hljs-comment"># 1 for target classes</span><br>    <span class="hljs-keyword">return</span> gt_mask, other_mask<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">cat_mask</span>(<span class="hljs-params">logits, gt_mask, other_mask</span>):<br>    <span class="hljs-string">&quot;&quot;&quot;</span><br><span class="hljs-string">    把TCKD的两部分concatenate到一起</span><br><span class="hljs-string">    &quot;&quot;&quot;</span><br>    target_pred = (logits * gt_mask).<span class="hljs-built_in">sum</span>(dim=<span class="hljs-number">1</span>, keepdims=<span class="hljs-literal">True</span>)  <span class="hljs-comment"># target_pred:(batch_size,1)</span><br>    other_pred = (logits * other_mask).<span class="hljs-built_in">sum</span>(dim=<span class="hljs-number">1</span>, keepdim=<span class="hljs-literal">True</span>)<br>    pred = torch.cat([target_pred, other_pred], dim=<span class="hljs-number">1</span>)  <span class="hljs-comment"># (batch_size, 2)</span><br>    <span class="hljs-keyword">return</span> pred<br></code></pre></td></tr></table></figure>
+<h2 id="dkd蒸馏器类实现">DKD蒸馏器类实现</h2>
+<p>这部分和之前的差不多，没什么特殊的，就不多解释了。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-meta">@register_distiller</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">DKD</span>(<span class="hljs-title class_ inherited__">BaseDistiller</span>):<br>    requires_feature = <span class="hljs-literal">False</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(DKD, self).__init__(student, teacher, criterion, args)<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, image, label</span>):<br>        <span class="hljs-keyword">with</span> torch.no_grad():<br>            self.teacher.<span class="hljs-built_in">eval</span>()<br>            logits_teacher = self.teacher(image)<br><br>        logits_student = self.student(image)<br><br>        loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, label)<br>        loss_kd = self.args.kd_loss_weight * dkd_loss(logits_student, logits_teacher, label, self.args.dkd_alpha,<br>                                                      self.args.dkd_beta, self.args.kd_temperature)<br>        losses_dict = &#123;<br>            <span class="hljs-string">&quot;loss_gt&quot;</span>: loss_gt,<br>            <span class="hljs-string">&quot;loss_kd&quot;</span>: loss_kd<br>        &#125;<br>        <span class="hljs-keyword">return</span> logits_student, losses_dict<br></code></pre></td></tr></table></figure>
+<h2 id="程序主体">程序主体</h2>
+<p>和之前有些许不同，更新使用timm.utils.metrics里面的AverageMeter类和accuracy函数去保存和计算指标。此外，在argparser里面加入了dkd-alpha和dkd-beta这两个参数。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">train</span>(<span class="hljs-params">epoch, distiller, loader, optimizer, args, device, total_iters</span>):<br>    loss_meter = AverageMeter()<br>    top1_meter = AverageMeter()<br>    top5_meter = AverageMeter()<br>    loss_gt_meter = AverageMeter()<br>    loss_kd_meter = AverageMeter()<br>    losses_meter_dict = defaultdict(AverageMeter)<br>    distiller.train()<br>    <span class="hljs-keyword">for</span> batch_idx, (images, labels) <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(loader):<br>        image = images.to(device)<br>        labels = labels.to(device)<br>        logits_student, losses_dict = distiller(image, labels)<br>        loss = <span class="hljs-built_in">sum</span>(losses_dict.values())<br>        top1, top5 = accuracy(logits_student.detach(), labels, topk=(<span class="hljs-number">1</span>, <span class="hljs-number">5</span>))<br>        top1_meter.update(top1.item(), image.size(<span class="hljs-number">0</span>))<br>        top5_meter.update(top5.item(), image.size(<span class="hljs-number">0</span>))<br><br>        loss_meter.update(loss.item(), image.size(<span class="hljs-number">0</span>))<br>        <span class="hljs-keyword">for</span> k <span class="hljs-keyword">in</span> losses_dict:<br>            losses_meter_dict[k].update(losses_dict[k].item(), image.size(<span class="hljs-number">0</span>))<br><br>        optimizer.zero_grad()<br>        loss.backward()<br>        optimizer.step()<br><br>        <span class="hljs-keyword">if</span> batch_idx % args.log_interval == <span class="hljs-number">0</span> <span class="hljs-keyword">or</span> batch_idx == total_iters - <span class="hljs-number">1</span>:<br>            losses_info = []<br>            <span class="hljs-keyword">for</span> k, v <span class="hljs-keyword">in</span> losses_meter_dict.items():<br>                info = <span class="hljs-string">f&#x27;<span class="hljs-subst">&#123;k.capitalize()&#125;</span>: <span class="hljs-subst">&#123;v.avg:<span class="hljs-number">.4</span>f&#125;</span>&#x27;</span><br>                losses_info.append(info)<br>            losses_info = <span class="hljs-string">&#x27;  &#x27;</span>.join(losses_info)<br>            _logger.info(<br>                <span class="hljs-string">f&#x27;Train-<span class="hljs-subst">&#123;epoch&#125;</span>: [<span class="hljs-subst">&#123;batch_idx&#125;</span>/<span class="hljs-subst">&#123;total_iters&#125;</span>], &#x27;</span><br>                <span class="hljs-string">f&#x27;Loss: <span class="hljs-subst">&#123;loss_meter.avg:<span class="hljs-number">.4</span>f&#125;</span> <span class="hljs-subst">&#123;losses_info&#125;</span>, &#x27;</span><br>                <span class="hljs-string">f&#x27;Acc@1: <span class="hljs-subst">&#123;top1_meter.avg:<span class="hljs-number">.2</span>f&#125;</span> Acc@5: <span class="hljs-subst">&#123;top5_meter.avg:<span class="hljs-number">.2</span>f&#125;</span>&#x27;</span><br>            )<br><br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">eval</span>(<span class="hljs-params">epoch, model, loader, args, device, total_iters, loss_func, saver</span>):<br>    loss_meter = AverageMeter()<br>    top1_meter = AverageMeter()<br>    top5_meter = AverageMeter()<br>    <span class="hljs-keyword">with</span> torch.no_grad():<br>        model.<span class="hljs-built_in">eval</span>()<br>        <span class="hljs-keyword">for</span> batch_idx, (image, labels) <span class="hljs-keyword">in</span> <span class="hljs-built_in">enumerate</span>(loader):<br>            image = image.to(device)<br>            labels = labels.to(device)<br>            preds = model(image)<br>            loss = loss_func(preds, labels)<br>            top1, top5 = accuracy(preds, labels, topk=(<span class="hljs-number">1</span>, <span class="hljs-number">5</span>))<br>            loss_meter.update(loss.item(), image.size(<span class="hljs-number">0</span>))<br>            top1_meter.update(top1.item(), image.size(<span class="hljs-number">0</span>))<br>            top5_meter.update(top5.item(), image.size(<span class="hljs-number">0</span>))<br>            <span class="hljs-keyword">if</span> batch_idx % args.log_interval == <span class="hljs-number">0</span> <span class="hljs-keyword">or</span> batch_idx == total_iters - <span class="hljs-number">1</span>:<br>                _logger.info(<br>                    <span class="hljs-string">f&#x27;\tEval-<span class="hljs-subst">&#123;epoch&#125;</span>: [<span class="hljs-subst">&#123;batch_idx&#125;</span>/<span class="hljs-subst">&#123;total_iters&#125;</span>], &#x27;</span><br>                    <span class="hljs-string">f&#x27;Loss: <span class="hljs-subst">&#123;loss_meter.avg:<span class="hljs-number">.4</span>f&#125;</span>, Acc@1: <span class="hljs-subst">&#123;top1_meter.avg:<span class="hljs-number">.2</span>f&#125;</span> Acc@5: <span class="hljs-subst">&#123;top5_meter.avg:<span class="hljs-number">.2</span>f&#125;</span>&#x27;</span><br>                )<br>        best_metric, best_epoch = saver.save_checkpoint(epoch, metric=top1_meter.avg)<br>    <span class="hljs-keyword">return</span> best_metric, best_epoch<br><br><br><span class="hljs-comment"># main function</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">main</span>():<br>    <span class="hljs-comment"># process args and some paths</span><br>    args = parser.parse_args()<br>    args_text = yaml.safe_dump(args.__dict__, default_flow_style=<span class="hljs-literal">False</span>)<br>    output_path = args.output <span class="hljs-keyword">if</span> args.output <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span> <span class="hljs-keyword">else</span> <span class="hljs-string">&#x27;./output/train&#x27;</span><br>    <span class="hljs-keyword">if</span> args.experiment:<br>        exp_name = args.experiment<br>    <span class="hljs-keyword">else</span>:<br>        exp_name = <span class="hljs-string">&#x27;-&#x27;</span>.join([<br>            datetime.now().strftime(<span class="hljs-string">&quot;%Y%m%d-%H%M%S&quot;</span>),<br>            args.model<br>        ])<br>    output_dir = get_outdir(output_path, exp_name)<br>    log_path = os.path.join(output_dir, <span class="hljs-string">&#x27;train.log&#x27;</span>)<br>    checkpoint_dir = os.path.join(output_dir, <span class="hljs-string">&#x27;checkpoints&#x27;</span>)<br>    os.makedirs(checkpoint_dir)<br><br>    <span class="hljs-comment"># setup logging</span><br>    setup_default_logging(log_path=log_path)<br><br>    <span class="hljs-comment"># choose device</span><br>    device = torch.device(<span class="hljs-string">&quot;cuda&quot;</span> <span class="hljs-keyword">if</span> torch.cuda.is_available() <span class="hljs-keyword">else</span> <span class="hljs-string">&quot;cpu&quot;</span>)<br><br>    <span class="hljs-comment"># create dataset</span><br>    <span class="hljs-keyword">if</span> args.dataset == <span class="hljs-string">&#x27;cifar10&#x27;</span>:<br>        transforms = transform.Compose([<br>            transform.Resize(<span class="hljs-number">224</span>),<br>            transform.ToTensor(),<br>            transform.Normalize(mean=(<span class="hljs-number">0.4914</span>, <span class="hljs-number">0.4822</span>, <span class="hljs-number">0.4465</span>), std=(<span class="hljs-number">0.2023</span>, <span class="hljs-number">0.1994</span>, <span class="hljs-number">0.2010</span>))<br>        ])<br>        train_dataset = datasets.CIFAR10(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">True</span>, transform=transforms,<br>                                         download=args.dataset_download)<br>        eval_dataset = datasets.CIFAR10(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">False</span>, transform=transforms,<br>                                        download=args.dataset_download)<br>    <span class="hljs-keyword">else</span>:<br>        transforms = transform.Compose([<br>            transform.Resize(<span class="hljs-number">224</span>),<br>            transform.ToTensor(),<br>            transform.Normalize(mean=((<span class="hljs-number">0.5071</span>, <span class="hljs-number">0.4867</span>, <span class="hljs-number">0.4408</span>)), std=(<span class="hljs-number">0.2675</span>, <span class="hljs-number">0.2565</span>, <span class="hljs-number">0.2761</span>))<br>        ])<br>        train_dataset = datasets.CIFAR100(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">True</span>, transform=transforms,<br>                                          download=args.dataset_download)<br>        eval_dataset = datasets.CIFAR100(root=<span class="hljs-string">&quot;datasets&quot;</span>, train=<span class="hljs-literal">False</span>, transform=transforms,<br>                                         download=args.dataset_download)<br><br>    <span class="hljs-comment"># create dataloader</span><br>    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=<span class="hljs-literal">True</span>)<br>    eval_loader = DataLoader(eval_dataset, batch_size=args.batch_size, shuffle=<span class="hljs-literal">False</span>)<br><br>    <span class="hljs-comment"># create model</span><br>    model = create_model(args.model, pretrained=args.pretrained, num_classes=args.num_classes)<br><br>    <span class="hljs-comment"># create teacher model</span><br>    teacher = <span class="hljs-literal">None</span><br>    <span class="hljs-keyword">if</span> args.teacher:<br>        teacher = create_model(args.teacher, pretrained=args.teacher_pretrained, num_classes=args.num_classes)<br>        <span class="hljs-keyword">if</span> args.teacher_weight:<br>            load_checkpoint(teacher, args.teacher_weight)<br>        teacher.requires_grad_(<span class="hljs-literal">False</span>)<br>        teacher.<span class="hljs-built_in">eval</span>()<br><br>    <span class="hljs-comment"># create optimizer</span><br>    loss_func = nn.CrossEntropyLoss()<br><br>    <span class="hljs-comment"># create distiller</span><br>    Distiller = get_distiller(args.distiller.lower())<br>    distiller = Distiller(model, teacher, loss_func, args)<br>    distiller.to(device)<br>    optimizer = torch.optim.SGD(distiller.parameters(), lr=args.learning_rate)<br><br>    <span class="hljs-comment"># Train and validation</span><br>    total_train_iters = <span class="hljs-built_in">len</span>(train_loader)<br>    total_eval_iters = <span class="hljs-built_in">len</span>(eval_loader)<br>    best_metric = <span class="hljs-literal">None</span><br><br>    saver = CheckpointSaver(<br>        model=model,<br>        optimizer=optimizer,<br>        args=args,<br>        checkpoint_dir=checkpoint_dir,<br>        recovery_dir=checkpoint_dir,<br>        decreasing=<span class="hljs-literal">False</span>,<br>        max_history=<span class="hljs-number">3</span><br>    )<br>    <span class="hljs-keyword">with</span> <span class="hljs-built_in">open</span>(os.path.join(output_dir, <span class="hljs-string">&#x27;args.yaml&#x27;</span>), <span class="hljs-string">&#x27;w&#x27;</span>) <span class="hljs-keyword">as</span> f:<br>        f.write(args_text)<br>    <span class="hljs-keyword">try</span>:<br>        <span class="hljs-keyword">for</span> epoch <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">1</span>, args.epochs + <span class="hljs-number">1</span>):<br>            train(epoch=epoch,<br>                  distiller=distiller,<br>                  loader=train_loader,<br>                  optimizer=optimizer,<br>                  args=args,<br>                  device=device,<br>                  total_iters=total_train_iters)<br><br>            best_metric, best_epoch = <span class="hljs-built_in">eval</span>(epoch=epoch,<br>                                           model=model,<br>                                           loader=eval_loader,<br>                                           args=args,<br>                                           device=device,<br>                                           total_iters=total_eval_iters,<br>                                           loss_func=loss_func,<br>                                           saver=saver)<br><br>    <span class="hljs-keyword">except</span> KeyboardInterrupt:<br>        <span class="hljs-keyword">pass</span><br>    <span class="hljs-keyword">if</span> best_metric <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:<br>        _logger.info(<span class="hljs-string">f&#x27;***** Best metric is <span class="hljs-subst">&#123;best_metric:<span class="hljs-number">.2</span>f&#125;</span>(<span class="hljs-subst">&#123;best_epoch&#125;</span>) *****.&#x27;</span>)<br><br><br><span class="hljs-keyword">if</span> __name__ == <span class="hljs-string">&quot;__main__&quot;</span>:<br>    main()<br></code></pre></td></tr></table></figure>
+<h2 id="实验效果">实验效果</h2>
+<p>用resnet18做学生模型，resnet50做教师模型（ACC@1
+53.49），alpha-1，beta-8，temperature-1，最后得到的准确率是50.67。</p>
+<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs cmd"><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">17</span>:<span class="hljs-number">02</span>,<span class="hljs-number">539</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">6388</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3630</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">2758</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">43</span>.<span class="hljs-number">75</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">75</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">17</span>:<span class="hljs-number">38</span>,<span class="hljs-number">120</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">500</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">5310</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3643</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1667</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">15</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">54</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">15</span>,<span class="hljs-number">326</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">1000</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">5245</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3662</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1582</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">10</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">38</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">49</span>,<span class="hljs-number">886</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">1500</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">4762</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3600</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1162</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">55</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">41</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">54</span>,<span class="hljs-number">068</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">1562</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">4736</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3603</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1133</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">50</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">38</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">54</span>,<span class="hljs-number">107</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">3</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">313</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">2085</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">53</span>.<span class="hljs-number">12</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">100</span>.<span class="hljs-number">00</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">19</span>:<span class="hljs-number">05</span>,<span class="hljs-number">688</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">3</span>: [<span class="hljs-number">312</span>/<span class="hljs-number">313</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">4073</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">50</span>.<span class="hljs-number">26</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">92</span>.<span class="hljs-number">85</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">19</span>:<span class="hljs-number">05</span>,<span class="hljs-number">740</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:<br> (&#x27;output/cifar10/resnet18/dkd_resnet50/<span class="hljs-number">20240701</span>-<span class="hljs-number">171241</span>-resnet18/checkpoints/checkpoint-<span class="hljs-number">2</span>.pth.tar&#x27;, <span class="hljs-number">50</span>.<span class="hljs-number">67</span>)<br> (&#x27;output/cifar10/resnet18/dkd_resnet50/<span class="hljs-number">20240701</span>-<span class="hljs-number">171241</span>-resnet18/checkpoints/checkpoint-<span class="hljs-number">3</span>.pth.tar&#x27;, <span class="hljs-number">50</span>.<span class="hljs-number">26</span>)<br> (&#x27;output/cifar10/resnet18/dkd_resnet50/<span class="hljs-number">20240701</span>-<span class="hljs-number">171241</span>-resnet18/checkpoints/checkpoint-<span class="hljs-number">1</span>.pth.tar&#x27;, <span class="hljs-number">47</span>.<span class="hljs-number">35</span>)<br><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">19</span>:<span class="hljs-number">05</span>,<span class="hljs-number">740</span> -                train: [    INFO] - ***** Best metric is <span class="hljs-number">50</span>.<span class="hljs-number">67</span>(<span class="hljs-number">2</span>) *****.<br></code></pre></td></tr></table></figure>
+<p>之前从零训练resnet18的结果是43.53，所以DKD的效果还是不错的。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="category-chain-item">知识蒸馏</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#知识蒸馏</a>
+      
+        <a href="/tags/PyTorch/" class="print-no-link">#PyTorch</a>
+      
+        <a href="/tags/timm/" class="print-no-link">#timm</a>
+      
+        <a href="/tags/Decoupled-knowledge-distillation/" class="print-no-link">#Decoupled knowledge distillation</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>第三章：解耦合知识蒸馏算法</div>
+      <div>http://example.com/2023/07/18/Chapter_3/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Arashi</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年7月18日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/07/02/Chapter_2/" title="第二章：基本的KD实现">
+                        <span class="hidden-mobile">第二章：基本的KD实现</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://cdn.jsdelivr.net/npm/mathjax@3.1.2/es5/tex-mml-chtml.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
