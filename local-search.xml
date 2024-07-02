@@ -20,11 +20,11 @@
     
     <tags>
       
-      <tag>知识蒸馏</tag>
-      
       <tag>PyTorch</tag>
       
       <tag>timm</tag>
+      
+      <tag>知识蒸馏</tag>
       
       <tag>Decoupled knowledge distillation</tag>
       
@@ -51,13 +51,13 @@
     
     <tags>
       
-      <tag>知识蒸馏</tag>
-      
-      <tag>Knowledge distillation</tag>
-      
       <tag>PyTorch</tag>
       
       <tag>timm</tag>
+      
+      <tag>知识蒸馏</tag>
+      
+      <tag>Knowledge distillation</tag>
       
     </tags>
     
