@@ -19,16 +19,16 @@
     <meta name="description" content="这次要实现解耦合知识蒸馏算法。 原文简单介绍 DKD算法的全称是Decoupled Knowledge Distillation，中文就是解耦合知识蒸馏算法，论文链接：2203.08679 (arxiv.org)。 所谓的解耦合是将原版KD中的蒸馏损失函数进行了重构，划分成了目标类（Target class）和非目标类（Non-target classes）两个部分，分别对两部分赋予不">
 <meta property="og:type" content="article">
 <meta property="og:title" content="第三章：解耦合知识蒸馏算法">
-<meta property="og:url" content="http://example.com/2023/07/18/Chapter_3/index.html">
+<meta property="og:url" content="http://example.com/2023/07/18/%E7%AC%AC%E4%B8%89%E7%AB%A0%EF%BC%9A%E8%A7%A3%E8%80%A6%E5%90%88%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F%E7%AE%97%E6%B3%95/index.html">
 <meta property="og:site_name" content="Knowledge distillation implementation">
 <meta property="og:description" content="这次要实现解耦合知识蒸馏算法。 原文简单介绍 DKD算法的全称是Decoupled Knowledge Distillation，中文就是解耦合知识蒸馏算法，论文链接：2203.08679 (arxiv.org)。 所谓的解耦合是将原版KD中的蒸馏损失函数进行了重构，划分成了目标类（Target class）和非目标类（Non-target classes）两个部分，分别对两部分赋予不">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-07-18T02:19:56.000Z">
-<meta property="article:modified_time" content="2024-07-01T09:53:00.055Z">
+<meta property="article:modified_time" content="2024-07-10T07:07:08.458Z">
 <meta property="article:author" content="Arashi">
 <meta property="article:tag" content="PyTorch">
 <meta property="article:tag" content="timm">
-<meta property="article:tag" content="知识蒸馏">
+<meta property="article:tag" content="基于响应的知识蒸馏">
 <meta property="article:tag" content="Decoupled knowledge distillation">
 <meta name="twitter:card" content="summary_large_image">
   
@@ -228,7 +228,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          2k 字
+          1.7k 字
         
       </span>
     
@@ -240,7 +240,7 @@
         
         
           <!-- compatible with older versions-->
-          17 分钟
+          15 分钟
         
       </span>
     
@@ -338,7 +338,6 @@ KD=\alpha{TCKD}+\beta{NCKD}
 <h2 id="实验效果">实验效果</h2>
 <p>用resnet18做学生模型，resnet50做教师模型（ACC@1
 53.49），alpha-1，beta-8，temperature-1，最后得到的准确率是50.67。</p>
-<figure class="highlight cmd"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs cmd"><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">17</span>:<span class="hljs-number">02</span>,<span class="hljs-number">539</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">6388</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3630</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">2758</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">43</span>.<span class="hljs-number">75</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">75</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">17</span>:<span class="hljs-number">38</span>,<span class="hljs-number">120</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">500</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">5310</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3643</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1667</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">15</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">54</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">15</span>,<span class="hljs-number">326</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">1000</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">5245</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3662</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1582</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">10</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">38</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">49</span>,<span class="hljs-number">886</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">1500</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">4762</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3600</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1162</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">55</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">41</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">54</span>,<span class="hljs-number">068</span> -                train: [    INFO] - Train-<span class="hljs-number">3</span>: [<span class="hljs-number">1562</span>/<span class="hljs-number">1563</span>], Loss: <span class="hljs-number">2</span>.<span class="hljs-number">4736</span> Loss_gt: <span class="hljs-number">1</span>.<span class="hljs-number">3603</span>  Loss_kd: <span class="hljs-number">1</span>.<span class="hljs-number">1133</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">51</span>.<span class="hljs-number">50</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">93</span>.<span class="hljs-number">38</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">18</span>:<span class="hljs-number">54</span>,<span class="hljs-number">107</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">3</span>: [<span class="hljs-number">0</span>/<span class="hljs-number">313</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">2085</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">53</span>.<span class="hljs-number">12</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">100</span>.<span class="hljs-number">00</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">19</span>:<span class="hljs-number">05</span>,<span class="hljs-number">688</span> -                train: [    INFO] - 	Eval-<span class="hljs-number">3</span>: [<span class="hljs-number">312</span>/<span class="hljs-number">313</span>], Loss: <span class="hljs-number">1</span>.<span class="hljs-number">4073</span>, Acc@<span class="hljs-number">1</span>: <span class="hljs-number">50</span>.<span class="hljs-number">26</span> Acc@<span class="hljs-number">5</span>: <span class="hljs-number">92</span>.<span class="hljs-number">85</span><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">19</span>:<span class="hljs-number">05</span>,<span class="hljs-number">740</span> - timm.utils.checkpoint_saver: [    INFO] - Current checkpoints:<br> (&#x27;output/cifar10/resnet18/dkd_resnet50/<span class="hljs-number">20240701</span>-<span class="hljs-number">171241</span>-resnet18/checkpoints/checkpoint-<span class="hljs-number">2</span>.pth.tar&#x27;, <span class="hljs-number">50</span>.<span class="hljs-number">67</span>)<br> (&#x27;output/cifar10/resnet18/dkd_resnet50/<span class="hljs-number">20240701</span>-<span class="hljs-number">171241</span>-resnet18/checkpoints/checkpoint-<span class="hljs-number">3</span>.pth.tar&#x27;, <span class="hljs-number">50</span>.<span class="hljs-number">26</span>)<br> (&#x27;output/cifar10/resnet18/dkd_resnet50/<span class="hljs-number">20240701</span>-<span class="hljs-number">171241</span>-resnet18/checkpoints/checkpoint-<span class="hljs-number">1</span>.pth.tar&#x27;, <span class="hljs-number">47</span>.<span class="hljs-number">35</span>)<br><br><span class="hljs-number">2024</span>-<span class="hljs-number">07</span>-<span class="hljs-number">01</span> <span class="hljs-number">17</span>:<span class="hljs-number">19</span>:<span class="hljs-number">05</span>,<span class="hljs-number">740</span> -                train: [    INFO] - ***** Best metric is <span class="hljs-number">50</span>.<span class="hljs-number">67</span>(<span class="hljs-number">2</span>) *****.<br></code></pre></td></tr></table></figure>
 <p>之前从零训练resnet18的结果是43.53，所以DKD的效果还是不错的。</p>
 
                 
@@ -377,7 +376,7 @@ KD=\alpha{TCKD}+\beta{NCKD}
       
         <a href="/tags/timm/" class="print-no-link">#timm</a>
       
-        <a href="/tags/%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#知识蒸馏</a>
+        <a href="/tags/%E5%9F%BA%E4%BA%8E%E5%93%8D%E5%BA%94%E7%9A%84%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#基于响应的知识蒸馏</a>
       
         <a href="/tags/Decoupled-knowledge-distillation/" class="print-no-link">#Decoupled knowledge distillation</a>
       
@@ -392,7 +391,7 @@ KD=\alpha{TCKD}+\beta{NCKD}
   <div class="license-box my-3">
     <div class="license-title">
       <div>第三章：解耦合知识蒸馏算法</div>
-      <div>http://example.com/2023/07/18/Chapter_3/</div>
+      <div>http://example.com/2023/07/18/第三章：解耦合知识蒸馏算法/</div>
     </div>
     <div class="license-meta">
       
@@ -436,11 +435,17 @@ KD=\alpha{TCKD}+\beta{NCKD}
                   <article class="post-prev col-6">
                     
                     
+                      <a href="/2023/07/28/%E5%AE%9E%E7%8E%B0%E8%AE%AD%E7%BB%83%E6%97%B6%E7%9A%84%E6%97%B6%E9%97%B4%E9%A2%84%E6%B5%8B/" title="实现训练时的时间预测">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">实现训练时的时间预测</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/07/02/Chapter_2/" title="第二章：基本的KD实现">
+                      <a href="/2023/07/02/%E7%AC%AC%E4%BA%8C%E7%AB%A0%EF%BC%9A%E5%9F%BA%E6%9C%AC%E7%9A%84KD%E5%AE%9E%E7%8E%B0/" title="第二章：基本的KD实现">
                         <span class="hidden-mobile">第二章：基本的KD实现</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
