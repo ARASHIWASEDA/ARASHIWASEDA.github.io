@@ -16,25 +16,24 @@
   <meta name="author" content="Arashi">
   <meta name="keywords" content="">
   
-    <meta name="description" content="这次介绍的知识蒸馏算法叫做Normalized Knowledge Distillation，不是一个被单独提出来的知识蒸馏算法，但本人比较感兴趣，所以专门拿出来介绍一下。 原文简单介绍 论文链接：From Knowledge Distillation to Self-Knowledge Distillation: A Unified Approach with Normalized L">
+    <meta name="description" content="如果训练的时候想知道大概的结束时间，可以实现一个简单的时间预测类。 12345678910111213141516171819202122232425import timeimport numpy as npfrom datetime import datetimeclass TimePredictor:    def __init__(self, epochs, history&#x3D;30):">
 <meta property="og:type" content="article">
-<meta property="og:title" content="第四章：NKD算法实现">
-<meta property="og:url" content="http://example.com/2023/07/29/%E7%AC%AC%E5%9B%9B%E7%AB%A0%EF%BC%9ANKD%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:title" content="实现训练时的时间预测">
+<meta property="og:url" content="http://example.com/2024/04/22/%E5%AE%9E%E7%8E%B0%E8%AE%AD%E7%BB%83%E6%97%B6%E7%9A%84%E6%97%B6%E9%97%B4%E9%A2%84%E6%B5%8B/index.html">
 <meta property="og:site_name" content="Knowledge distillation implementation">
-<meta property="og:description" content="这次介绍的知识蒸馏算法叫做Normalized Knowledge Distillation，不是一个被单独提出来的知识蒸馏算法，但本人比较感兴趣，所以专门拿出来介绍一下。 原文简单介绍 论文链接：From Knowledge Distillation to Self-Knowledge Distillation: A Unified Approach with Normalized L">
+<meta property="og:description" content="如果训练的时候想知道大概的结束时间，可以实现一个简单的时间预测类。 12345678910111213141516171819202122232425import timeimport numpy as npfrom datetime import datetimeclass TimePredictor:    def __init__(self, epochs, history&#x3D;30):">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2023-07-29T06:02:15.000Z">
-<meta property="article:modified_time" content="2024-07-10T07:18:41.594Z">
+<meta property="article:published_time" content="2024-04-22T05:19:26.000Z">
+<meta property="article:modified_time" content="2024-07-11T04:43:58.997Z">
 <meta property="article:author" content="Arashi">
-<meta property="article:tag" content="PyTorch">
-<meta property="article:tag" content="timm">
-<meta property="article:tag" content="基于响应的知识蒸馏">
-<meta property="article:tag" content="Normalized knowledge distillation">
+<meta property="article:tag" content="深度学习">
+<meta property="article:tag" content="scripts">
+<meta property="article:tag" content="时间预测">
 <meta name="twitter:card" content="summary_large_image">
   
   
   
-  <title>第四章：NKD算法实现 - Knowledge distillation implementation</title>
+  <title>实现训练时的时间预测 - Knowledge distillation implementation</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
@@ -204,7 +203,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle">第四章：NKD算法实现</span>
+            <span id="subtitle">实现训练时的时间预测</span>
           
         </div>
 
@@ -215,8 +214,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2023-07-29 15:02" pubdate>
-          2023年7月29日 下午
+        <time datetime="2024-04-22 14:19" pubdate>
+          2024年4月22日 下午
         </time>
       </span>
     
@@ -228,7 +227,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          881 字
+          180 字
         
       </span>
     
@@ -240,7 +239,7 @@
         
         
           <!-- compatible with older versions-->
-          8 分钟
+          2 分钟
         
       </span>
     
@@ -277,46 +276,13 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header">第四章：NKD算法实现</h1>
+            <h1 id="seo-header">实现训练时的时间预测</h1>
             
             
               <div class="markdown-body">
                 
-                <p>这次介绍的知识蒸馏算法叫做Normalized Knowledge
-Distillation，不是一个被单独提出来的知识蒸馏算法，但本人比较感兴趣，所以专门拿出来介绍一下。</p>
-<h2 id="原文简单介绍">原文简单介绍</h2>
-<p>论文链接：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2303.13005">From Knowledge
-Distillation to Self-Knowledge Distillation: A Unified Approach with
-Normalized Loss and Customized Soft Labels</a>。</p>
-<p>这篇文章实际上一共提出了两个知识蒸馏的模块，一个是NKD，另一个是USKD。感觉论文的重点其实是Self
-KD，但是本人单独跑了NKD的部分之后觉得效果很好，也可以直接耦合到其他KD算法中。不过NKD的部分与之前介绍的DKD算法比较相似，作者可能是考虑到这一点没有单独把NKD作为一个创新点发表。</p>
-<p>之前介绍的DKD算法是把目标类和非目标类分别计算KL散度当作蒸馏的损失函数，而NKD也是把目标类和非目标类分别进行蒸馏，但在损失函数的选择和划分的策略上略有不同。</p>
-<p>依然还是先搬出来交叉熵损失函数的公式： <span class="math display">\[
-L_{ori}=-\sum^C_iV_ilog(S_i)=-log(S_i)
-\]</span> 如果把交叉熵应用与知识蒸馏，损失函数可以变成这样： <span
-class="math display">\[
-L_{kd}=-\sum^C_iT_ilog(S_i)=-T_ilog(S_i)-\sum^C_{i\neq{t}}T_ilog(S_i)
-\]</span> 引入一个Normalize函数<span
-class="math inline">\(N()\)</span>对输出进行处理，将上式变形如下： <span
-class="math display">\[
-L_{nkd}=-T_tlog(S_t)-\gamma\cdot\lambda^2\cdot\sum^C_{i\neq{t}}N(T^\lambda_i)log(N(S^\lambda_i))
-\]</span> 这里面的<span
-class="math inline">\(\lambda\)</span>实际是进行temperature计算的意思。到这里NKD的蒸馏损失函数就构造完毕了，看起来很简单，但其实效果很好。深度学习里很多技巧都是简单而有效的，NKD也有一点这个感觉了。</p>
-<p>然后我们对比一下NKD和DKD的区别在哪，DKD的函数如下： <span
-class="math display">\[
-L_{dkd}=p^T_tlog(\frac{p^T_t}{p^S_t})+p^T_{\backslash{t}}log(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})+p^T_{\backslash{t}}\sum^C_{i=1,i\neq{t}}\hat{p}^T_ilog(\frac{\hat{p}^T_i}{\hat{p}^S_i})
-\\
-L_{dkd}=\alpha{TCKD}+\beta{NCKD}
-\]</span>
-乍看之下，两者的区别似乎很大，但其实主要的区别是在于DKD引入了一个新的<span
-class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的损失函数不同：DKD用的KL散度，而NKD用的交叉熵。</p>
-<h2 id="nkd损失实现">NKD损失实现</h2>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">nkd_loss</span>(<span class="hljs-params">logits_student, logits_teacher, label, gamma, temperature=<span class="hljs-number">1.</span></span>):<br>    target = label.reshape(-<span class="hljs-number">1</span>)<br>    target = target.unsqueeze(<span class="hljs-number">1</span>)<br><br>    N, c = logits_student.shape<br>    <span class="hljs-comment"># 函数中的第一部分</span><br>    log_pred_student = F.log_softmax(logits_student, dim=<span class="hljs-number">1</span>)<br>    pred_teacher = F.softmax(logits_teacher, dim=<span class="hljs-number">1</span>)<br><br>    target_student = torch.gather(log_pred_student, <span class="hljs-number">1</span>, label)  <span class="hljs-comment"># gather的作用是把目标类别的值取出来</span><br>    target_teacher = torch.gather(pred_teacher, <span class="hljs-number">1</span>, label)  <span class="hljs-comment"># shape: (batch_size,1)</span><br>    tckd_loss = -(target_student * target_teacher).mean()<br>	<br>    <span class="hljs-comment"># 函数中的第二部分</span><br>    mask = torch.ones_like(logits_student).scatter_(<span class="hljs-number">1</span>, label, <span class="hljs-number">0</span>).<span class="hljs-built_in">bool</span>()  <span class="hljs-comment"># scatter的作用是把目标类别的mask置0</span><br>    logits_student = logits_student[mask].reshape(N, -<span class="hljs-number">1</span>)<br>    logits_teacher = logits_teacher[mask].reshape(N, -<span class="hljs-number">1</span>)<br><br>    non_target_student = F.log_softmax(logits_student / temperature, dim=<span class="hljs-number">1</span>)<br>    non_target_teacher = F.softmax(logits_teacher / temperature, dim=<span class="hljs-number">1</span>)<br><br>    nckd_loss = -(non_target_student, non_target_teacher).<span class="hljs-built_in">sum</span>(dim=<span class="hljs-number">1</span>).mean()<br>    <span class="hljs-keyword">return</span> tckd_loss + gamma * (temperature ** <span class="hljs-number">2</span>) * nckd_loss<br></code></pre></td></tr></table></figure>
-<h2 id="实现nkd蒸馏器的类">实现NKD蒸馏器的类</h2>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-meta">@register_distiller  </span><span class="hljs-comment"># 装饰器，注册NKD，具体用法参考本博客第二章</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">NKD</span>(<span class="hljs-title class_ inherited__">BaseDistiller</span>):  <span class="hljs-comment"># 蒸馏器继承于BaseDistiller，定义来自于第二章</span><br>    requires_feature = <span class="hljs-literal">False</span>  <span class="hljs-comment"># 指示蒸馏方法是否需要中间层特征</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(NKD, self).__init__(student, teacher, criterion, args)<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, image, labels</span>):<br>        <span class="hljs-keyword">with</span> torch.no_grad():<br>            self.teacher.<span class="hljs-built_in">eval</span>()<br>            logits_teacher = self.teacher(image)<br>        logits_student = self.student(image)<br>        loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, labels)<br>        loss_kd = self.args.kd_loss_weight * nkd_loss(logits_student, logits_teacher, labels,<br>                                                      self.args.nkd_gamma, self.args.nkd_temperature)<br>        losses_dict = &#123;<br>            <span class="hljs-string">&quot;loss_gt&quot;</span>: loss_gt,<br>            <span class="hljs-string">&quot;loss_kd&quot;</span>: loss_kd,<br>        &#125;<br>        <span class="hljs-keyword">return</span> logits_student, losses_dict<br></code></pre></td></tr></table></figure>
-<p>具体的main函数就不放了，与之前的文章一样，这里简单展示一下用法：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs python">Distiller=get_distiller(<span class="hljs-string">&quot;name_of_distiller&quot;</span>)  <span class="hljs-comment"># example: get_distiller(&quot;nkd&quot;)</span><br>distiller=Distiller(student,teacher,criterion,args)<br></code></pre></td></tr></table></figure>
-<h2 id="结果展示">结果展示</h2>
+                <p>如果训练的时候想知道大概的结束时间，可以实现一个简单的时间预测类。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">import</span> time<br><span class="hljs-keyword">import</span> numpy <span class="hljs-keyword">as</span> np<br><span class="hljs-keyword">from</span> datetime <span class="hljs-keyword">import</span> datetime<br><br><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">TimePredictor</span>:<br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, epochs, history=<span class="hljs-number">30</span></span>):<br>        self.history = history  <span class="hljs-comment"># 保留多少个最近的历史数据</span><br>        self.rest_epochs = epochs  <span class="hljs-comment"># 训练epoch总数</span><br>        self.duration_list = []  <span class="hljs-comment"># 保留最近的epoch训练时间</span><br>        self.prev_time = time.time()  <span class="hljs-comment"># 记录上一次更新时间</span><br>        self.average_duration = <span class="hljs-number">0.</span>  <span class="hljs-comment"># 记录epoch平均训练时间</span><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">update</span>(<span class="hljs-params">self</span>):<br>        temp_time = time.time()<br>        duration = temp_time - self.prev_time<br>        self.prev_time = temp_time<br>        self.duration_list.append(duration)<br>        self.rest_epochs -= <span class="hljs-number">1</span>  <span class="hljs-comment"># 剩余epochs数减1</span><br>        <span class="hljs-keyword">if</span> (<span class="hljs-built_in">len</span>(self.duration_list) &gt; self.history):<br>            self.duration_list = self.duration_list[-self.history:]  <span class="hljs-comment"># 仅保留最近的history个记录</span><br>        self.average_duration = np.mean(self.duration_list)  <span class="hljs-comment"># 更新平均训练时间</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">get_predict</span>(<span class="hljs-params">self</span>):<br>        end_timestamp = self.prev_time + self.average_duration * self.rest_epochs  <span class="hljs-comment"># 计算预测结束时间</span><br>        <span class="hljs-keyword">return</span> datetime.fromtimestamp(end_timestamp).strftime(<span class="hljs-string">&#x27;%Y-%m-%d %H:%M:%S&#x27;</span>)<br></code></pre></td></tr></table></figure>
 
                 
               </div>
@@ -335,7 +301,7 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
     
       <span class="category-chain">
         
-  <a href="/categories/%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="category-chain-item">知识蒸馏</a>
+  <a href="/categories/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" class="category-chain-item">深度学习</a>
   
   
 
@@ -350,13 +316,11 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/PyTorch/" class="print-no-link">#PyTorch</a>
+        <a href="/tags/%E6%B7%B1%E5%BA%A6%E5%AD%A6%E4%B9%A0/" class="print-no-link">#深度学习</a>
       
-        <a href="/tags/timm/" class="print-no-link">#timm</a>
+        <a href="/tags/scripts/" class="print-no-link">#scripts</a>
       
-        <a href="/tags/%E5%9F%BA%E4%BA%8E%E5%93%8D%E5%BA%94%E7%9A%84%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#基于响应的知识蒸馏</a>
-      
-        <a href="/tags/Normalized-knowledge-distillation/" class="print-no-link">#Normalized knowledge distillation</a>
+        <a href="/tags/%E6%97%B6%E9%97%B4%E9%A2%84%E6%B5%8B/" class="print-no-link">#时间预测</a>
       
     </div>
   
@@ -368,8 +332,8 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>第四章：NKD算法实现</div>
-      <div>http://example.com/2023/07/29/第四章：NKD算法实现/</div>
+      <div>实现训练时的时间预测</div>
+      <div>http://example.com/2024/04/22/实现训练时的时间预测/</div>
     </div>
     <div class="license-meta">
       
@@ -381,7 +345,7 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2023年7月29日</div>
+          <div>2024年4月22日</div>
         </div>
       
       
@@ -417,8 +381,8 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/07/28/%E5%AE%9E%E7%8E%B0%E8%AE%AD%E7%BB%83%E6%97%B6%E7%9A%84%E6%97%B6%E9%97%B4%E9%A2%84%E6%B5%8B/" title="实现训练时的时间预测">
-                        <span class="hidden-mobile">实现训练时的时间预测</span>
+                      <a href="/2024/04/16/%E7%AC%AC%E5%9B%9B%E7%AB%A0%EF%BC%9ANKD%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/" title="第四章：NKD算法实现">
+                        <span class="hidden-mobile">第四章：NKD算法实现</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
