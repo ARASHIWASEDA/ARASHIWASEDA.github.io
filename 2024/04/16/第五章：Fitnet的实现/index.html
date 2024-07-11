@@ -16,25 +16,25 @@
   <meta name="author" content="Arashi">
   <meta name="keywords" content="">
   
-    <meta name="description" content="这次介绍的知识蒸馏算法叫做Normalized Knowledge Distillation，不是一个被单独提出来的知识蒸馏算法，但本人比较感兴趣，所以专门拿出来介绍一下。 原文简单介绍 论文链接：From Knowledge Distillation to Self-Knowledge Distillation: A Unified Approach with Normalized L">
+    <meta name="description" content="这篇介绍一个区别于Logits-based KD算法的Feastures-based KD算法。 论文简介 文章是来自于2014年的FITNETS: HINTS FOR THIN DEEP NETS。 本博客前面介绍的几种KD算法都是基于对教师模型响应的蒸馏，即使用教师模型的输出作为Soft Labels充当学生模型的在真实标签（Hard Labels）以外的学习对象。 我们知道，神经">
 <meta property="og:type" content="article">
-<meta property="og:title" content="第四章：NKD算法实现">
-<meta property="og:url" content="http://example.com/2024/04/16/%E7%AC%AC%E5%9B%9B%E7%AB%A0%EF%BC%9ANKD%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:title" content="第五章：Fitnet的实现">
+<meta property="og:url" content="http://example.com/2024/04/16/%E7%AC%AC%E4%BA%94%E7%AB%A0%EF%BC%9AFitnet%E7%9A%84%E5%AE%9E%E7%8E%B0/index.html">
 <meta property="og:site_name" content="Knowledge distillation implementation">
-<meta property="og:description" content="这次介绍的知识蒸馏算法叫做Normalized Knowledge Distillation，不是一个被单独提出来的知识蒸馏算法，但本人比较感兴趣，所以专门拿出来介绍一下。 原文简单介绍 论文链接：From Knowledge Distillation to Self-Knowledge Distillation: A Unified Approach with Normalized L">
+<meta property="og:description" content="这篇介绍一个区别于Logits-based KD算法的Feastures-based KD算法。 论文简介 文章是来自于2014年的FITNETS: HINTS FOR THIN DEEP NETS。 本博客前面介绍的几种KD算法都是基于对教师模型响应的蒸馏，即使用教师模型的输出作为Soft Labels充当学生模型的在真实标签（Hard Labels）以外的学习对象。 我们知道，神经">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-04-16T06:02:15.000Z">
-<meta property="article:modified_time" content="2024-07-11T04:43:45.787Z">
+<meta property="article:modified_time" content="2024-07-11T06:05:54.959Z">
 <meta property="article:author" content="Arashi">
 <meta property="article:tag" content="PyTorch">
 <meta property="article:tag" content="timm">
-<meta property="article:tag" content="基于响应的知识蒸馏">
-<meta property="article:tag" content="Normalized knowledge distillation">
+<meta property="article:tag" content="基于特征的知识蒸馏">
+<meta property="article:tag" content="Fitnet">
 <meta name="twitter:card" content="summary_large_image">
   
   
   
-  <title>第四章：NKD算法实现 - Knowledge distillation implementation</title>
+  <title>第五章：Fitnet的实现 - Knowledge distillation implementation</title>
 
   <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
 
@@ -204,7 +204,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle">第四章：NKD算法实现</span>
+            <span id="subtitle">第五章：Fitnet的实现</span>
           
         </div>
 
@@ -228,7 +228,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          881 字
+          1.1k 字
         
       </span>
     
@@ -240,7 +240,7 @@
         
         
           <!-- compatible with older versions-->
-          8 分钟
+          10 分钟
         
       </span>
     
@@ -277,46 +277,52 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header">第四章：NKD算法实现</h1>
+            <h1 id="seo-header">第五章：Fitnet的实现</h1>
             
             
               <div class="markdown-body">
                 
-                <p>这次介绍的知识蒸馏算法叫做Normalized Knowledge
-Distillation，不是一个被单独提出来的知识蒸馏算法，但本人比较感兴趣，所以专门拿出来介绍一下。</p>
-<h2 id="原文简单介绍">原文简单介绍</h2>
-<p>论文链接：<a target="_blank" rel="noopener" href="https://arxiv.org/pdf/2303.13005">From Knowledge
-Distillation to Self-Knowledge Distillation: A Unified Approach with
-Normalized Loss and Customized Soft Labels</a>。</p>
-<p>这篇文章实际上一共提出了两个知识蒸馏的模块，一个是NKD，另一个是USKD。感觉论文的重点其实是Self
-KD，但是本人单独跑了NKD的部分之后觉得效果很好，也可以直接耦合到其他KD算法中。不过NKD的部分与之前介绍的DKD算法比较相似，作者可能是考虑到这一点没有单独把NKD作为一个创新点发表。</p>
-<p>之前介绍的DKD算法是把目标类和非目标类分别计算KL散度当作蒸馏的损失函数，而NKD也是把目标类和非目标类分别进行蒸馏，但在损失函数的选择和划分的策略上略有不同。</p>
-<p>依然还是先搬出来交叉熵损失函数的公式： <span class="math display">\[
-L_{ori}=-\sum^C_iV_ilog(S_i)=-log(S_i)
-\]</span> 如果把交叉熵应用与知识蒸馏，损失函数可以变成这样： <span
-class="math display">\[
-L_{kd}=-\sum^C_iT_ilog(S_i)=-T_ilog(S_i)-\sum^C_{i\neq{t}}T_ilog(S_i)
-\]</span> 引入一个Normalize函数<span
-class="math inline">\(N()\)</span>对输出进行处理，将上式变形如下： <span
-class="math display">\[
-L_{nkd}=-T_tlog(S_t)-\gamma\cdot\lambda^2\cdot\sum^C_{i\neq{t}}N(T^\lambda_i)log(N(S^\lambda_i))
-\]</span> 这里面的<span
-class="math inline">\(\lambda\)</span>实际是进行temperature计算的意思。到这里NKD的蒸馏损失函数就构造完毕了，看起来很简单，但其实效果很好。深度学习里很多技巧都是简单而有效的，NKD也有一点这个感觉了。</p>
-<p>然后我们对比一下NKD和DKD的区别在哪，DKD的函数如下： <span
-class="math display">\[
-L_{dkd}=p^T_tlog(\frac{p^T_t}{p^S_t})+p^T_{\backslash{t}}log(\frac{p^T_{\backslash{t}}}{p^S_{\backslash{t}}})+p^T_{\backslash{t}}\sum^C_{i=1,i\neq{t}}\hat{p}^T_ilog(\frac{\hat{p}^T_i}{\hat{p}^S_i})
-\\
-L_{dkd}=\alpha{TCKD}+\beta{NCKD}
-\]</span>
-乍看之下，两者的区别似乎很大，但其实主要的区别是在于DKD引入了一个新的<span
-class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的损失函数不同：DKD用的KL散度，而NKD用的交叉熵。</p>
-<h2 id="nkd损失实现">NKD损失实现</h2>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">nkd_loss</span>(<span class="hljs-params">logits_student, logits_teacher, label, gamma, temperature=<span class="hljs-number">1.</span></span>):<br>    target = label.reshape(-<span class="hljs-number">1</span>)<br>    target = target.unsqueeze(<span class="hljs-number">1</span>)<br><br>    N, c = logits_student.shape<br>    <span class="hljs-comment"># 函数中的第一部分</span><br>    log_pred_student = F.log_softmax(logits_student, dim=<span class="hljs-number">1</span>)<br>    pred_teacher = F.softmax(logits_teacher, dim=<span class="hljs-number">1</span>)<br><br>    target_student = torch.gather(log_pred_student, <span class="hljs-number">1</span>, label)  <span class="hljs-comment"># gather的作用是把目标类别的值取出来</span><br>    target_teacher = torch.gather(pred_teacher, <span class="hljs-number">1</span>, label)  <span class="hljs-comment"># shape: (batch_size,1)</span><br>    tckd_loss = -(target_student * target_teacher).mean()<br>	<br>    <span class="hljs-comment"># 函数中的第二部分</span><br>    mask = torch.ones_like(logits_student).scatter_(<span class="hljs-number">1</span>, label, <span class="hljs-number">0</span>).<span class="hljs-built_in">bool</span>()  <span class="hljs-comment"># scatter的作用是把目标类别的mask置0</span><br>    logits_student = logits_student[mask].reshape(N, -<span class="hljs-number">1</span>)<br>    logits_teacher = logits_teacher[mask].reshape(N, -<span class="hljs-number">1</span>)<br><br>    non_target_student = F.log_softmax(logits_student / temperature, dim=<span class="hljs-number">1</span>)<br>    non_target_teacher = F.softmax(logits_teacher / temperature, dim=<span class="hljs-number">1</span>)<br><br>    nckd_loss = -(non_target_student, non_target_teacher).<span class="hljs-built_in">sum</span>(dim=<span class="hljs-number">1</span>).mean()<br>    <span class="hljs-keyword">return</span> tckd_loss + gamma * (temperature ** <span class="hljs-number">2</span>) * nckd_loss<br></code></pre></td></tr></table></figure>
-<h2 id="实现nkd蒸馏器的类">实现NKD蒸馏器的类</h2>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-meta">@register_distiller  </span><span class="hljs-comment"># 装饰器，注册NKD，具体用法参考本博客第二章</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">NKD</span>(<span class="hljs-title class_ inherited__">BaseDistiller</span>):  <span class="hljs-comment"># 蒸馏器继承于BaseDistiller，定义来自于第二章</span><br>    requires_feature = <span class="hljs-literal">False</span>  <span class="hljs-comment"># 指示蒸馏方法是否需要中间层特征</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(NKD, self).__init__(student, teacher, criterion, args)<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, image, labels</span>):<br>        <span class="hljs-keyword">with</span> torch.no_grad():<br>            self.teacher.<span class="hljs-built_in">eval</span>()<br>            logits_teacher = self.teacher(image)<br>        logits_student = self.student(image)<br>        loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, labels)<br>        loss_kd = self.args.kd_loss_weight * nkd_loss(logits_student, logits_teacher, labels,<br>                                                      self.args.nkd_gamma, self.args.nkd_temperature)<br>        losses_dict = &#123;<br>            <span class="hljs-string">&quot;loss_gt&quot;</span>: loss_gt,<br>            <span class="hljs-string">&quot;loss_kd&quot;</span>: loss_kd,<br>        &#125;<br>        <span class="hljs-keyword">return</span> logits_student, losses_dict<br></code></pre></td></tr></table></figure>
-<p>具体的main函数就不放了，与之前的文章一样，这里简单展示一下用法：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs python">Distiller=get_distiller(<span class="hljs-string">&quot;name_of_distiller&quot;</span>)  <span class="hljs-comment"># example: get_distiller(&quot;nkd&quot;)</span><br>distiller=Distiller(student,teacher,criterion,args)<br></code></pre></td></tr></table></figure>
-<h2 id="结果展示">结果展示</h2>
+                <p>这篇介绍一个区别于Logits-based KD算法的Feastures-based KD算法。</p>
+<h2 id="论文简介">论文简介</h2>
+<p>文章是来自于2014年的<a
+target="_blank" rel="noopener" href="https://arxiv.org/pdf/1412.6550">FITNETS: HINTS FOR THIN DEEP
+NETS</a>。</p>
+<p>本博客前面介绍的几种KD算法都是基于对教师模型响应的蒸馏，即使用教师模型的输出作为Soft
+Labels充当学生模型的在真实标签（Hard Labels）以外的学习对象。</p>
+<p>我们知道，神经网络的输出实际上是对提取到的特征进行的选择和重组。因此，一个很顺理成章的思路就产生了：能不能以教师模型的中间层特征作为学生模型的额外学习对象呢？从另一个角度也可也解释为：不仅仅要告诉学生模型答案是什么，还想告诉学生模型怎么算出来的答案。</p>
+<p>首先我们对两个概念做一下定义：</p>
+<ul>
+<li>Hint层：选定的教师模型的某一个隐藏层</li>
+<li>Guided层：选定的学生模型的某一个隐藏层</li>
+</ul>
+<p>由于教师模型和学生模型的维度一般差别比较大，所以这里就涉及一个Projector的问题。更具体地说，大概存在三种选择：</p>
+<ol type="1">
+<li>把学生模型的Guided层映射到Hint层相同的维度</li>
+<li>把教师模型的Hint层映射到Guided层相同的维度</li>
+<li>把Hint层和Guided层分别都映射到一个第三维度上</li>
+</ol>
+<p>Fitnet采取的是第一种方案，也就是对Guided层应用一个Projector，实际上就是做卷积运算。</p>
+<p>Fitnet的训练流程：</p>
+<ol type="1">
+<li>训练教师模型</li>
+<li>选择教师模型的Hint层和学生模型的Guided层，<strong>用卷积算子将学生模型的特征缩放到和Hint层相同的维度</strong>，然后计算这两者的均方差损失函数</li>
+<li>最后用传统的KD算法再对学生做Logits-based KD</li>
+</ol>
+<p>从文章给出的实验数据看，Fitnet的效果有时比教师模型还好。</p>
+<p>本人感觉这种情况可遇不可求，一是因为Fitnet提出时，网络的深度还有限，因此Fitnet这种把“胖而浅”的网络蒸馏到“瘦而深”的网络中其实提升了网络的学习能力，性能超越是存在可能的。如果选Resnet50作为教师模型，Resnet18作为学生模型，这个时候的提升就不会那么夸张了，因为教师模型其实比学生模型更深。</p>
+<p>二是因为Fitnet需要选择Hint层和Guided层，如果选择不合适的话也不容易达到理想的蒸馏效果。</p>
+<h2 id="fitnet蒸馏器实现">Fitnet蒸馏器实现</h2>
+<p>下面简单介绍一下Fitnet的实现方法。这里Fitnet的实现参考了另一个蒸馏算法OFAKD中的写法，与Fitnet中的描述有一些差异，具体体现在：</p>
+<ol type="1">
+<li>增加了Hint层和Guided层的选择灵活度，可以通过超参数的设置随意选择蒸馏层的数量和位置；</li>
+<li>省略了第三个Logits-based的蒸馏阶段。</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-meta">@register_distiller  </span><span class="hljs-comment"># 依然还是通过装饰器注册蒸馏器，不了解的可以看之前的博客</span><br><span class="hljs-keyword">class</span> <span class="hljs-title class_">FITNET</span>(<span class="hljs-title class_ inherited__">BaseDistiller</span>):<br>    requires_feature = <span class="hljs-literal">True</span>  <span class="hljs-comment"># 需要中间层特征</span><br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">__init__</span>(<span class="hljs-params">self, student, teacher, criterion, args</span>):<br>        <span class="hljs-built_in">super</span>(FITNET, self).__init__(student, teacher, criterion, args)<br>		<span class="hljs-comment"># 这里的is_cnn_model是额外添加的方法，用来判断模型是不是CNN结构，后面会介绍</span><br>        <span class="hljs-keyword">assert</span> self.student.is_cnn_model() <span class="hljs-keyword">and</span> self.teacher.is_cnn_model(), <span class="hljs-string">&#x27;FitNet only support CNN models&#x27;</span><br><br>        self.projector = nn.ModuleDict()<br><br>        <span class="hljs-keyword">for</span> stage <span class="hljs-keyword">in</span> self.args.fitnet_stages:<br>            _, shape_s = self.student.stage_info(stage)  <span class="hljs-comment"># 获取层信息</span><br>            _, shape_t = self.teacher.stage_info(stage)<br><br>            chans_s, _, _ = shape_s<br>            chans_t, _, _ = shape_t<br>			<span class="hljs-comment"># 把Guided层映射到Hint层维度</span><br>            projector = nn.Conv2d(chans_s, chans_t, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>, <span class="hljs-number">0</span>, bias=<span class="hljs-literal">False</span>)<br>            self.projector[stage] = projector<br>        self.projector.apply(init_weights)<br><br>    <span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, image, labels</span>):<br>        <span class="hljs-keyword">with</span> torch.no_grad():<br>            self.teacher.<span class="hljs-built_in">eval</span>()<br>            logits_teacher, features_teacher = self.teacher(image, self.requires_feature)<br><br>        logits_student, featurea_student = self.student(image, self.requires_feature)<br><br>        losses_fitnet = []<br>        <span class="hljs-keyword">for</span> stage <span class="hljs-keyword">in</span> self.args.fitnet_stages:<br>            idx_s, _ = self.student.stage_info(stage)<br>            idx_t, _ = self.teacher.stage_info(stage)<br><br>            outs_teacher = features_teacher[idx_t]<br>            <span class="hljs-comment"># 取出特定层的feature进行计算</span><br>            outs_student = self.projector[stage](featurea_student[idx_s])<br><br>            losses_fitnet.append(F.mse_loss(outs_student, outs_teacher))<br><br>        loss_fitnet = self.args.kd_loss_weight * <span class="hljs-built_in">sum</span>(losses_fitnet)<br>        loss_gt = self.args.gt_loss_weight * self.criterion(logits_student, labels)<br>        losses_dict = &#123;<br>            <span class="hljs-string">&#x27;loss_gt&#x27;</span>: loss_gt,<br>            <span class="hljs-string">&#x27;loss_fitnet&#x27;</span>: loss_fitnet<br>        &#125;<br>        <span class="hljs-keyword">return</span> logits_student, losses_dict<br></code></pre></td></tr></table></figure>
+<h2
+id="如何通过修改模型forward方法获取到模型的中间层特征">如何通过修改模型forward方法获取到模型的中间层特征</h2>
+<p>可以手动把timm中的Resnet类拿出来，然后修改下面这两个方法，就可以获取到中间层特征了。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">forward_features</span>(<span class="hljs-params">self, x, requires_feature</span>):<br>    feat = []<br>    x = self.conv1<br>    x = self.bn1<br>    x = self.act1<br>    x = self.maxpool(x)<br><br>    x = self.layer1(x)<br>    feat.append(x)<br>    x = self.layer2(x)<br>    feat.append(x)<br>    x = self.layer3(x)<br>    feat.append(x)<br>    x = self.layer4(x)<br>    feat.append(x)<br><br>    <span class="hljs-keyword">return</span> (x, feat) <span class="hljs-keyword">if</span> requires_feature <span class="hljs-keyword">else</span> x<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x, requires_feature=<span class="hljs-literal">False</span></span>):<br>    <span class="hljs-keyword">if</span> requires_feature:<br>        x, feat = self.forward_features(x, requires_feature)<br>        x = self.forward_head(x, pre_logits=<span class="hljs-literal">True</span>)<br>        feat.append(x)<br>        x = self.fc(x)<br>        <span class="hljs-keyword">return</span> x, feat<br>    <span class="hljs-keyword">else</span>:<br>        x = self.forward_features(x, <span class="hljs-literal">False</span>)<br>        x = self.forward_head(x)<br>        <span class="hljs-keyword">return</span> x<br></code></pre></td></tr></table></figure>
+<h2 id="实验效果">实验效果</h2>
 
                 
               </div>
@@ -354,9 +360,9 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
       
         <a href="/tags/timm/" class="print-no-link">#timm</a>
       
-        <a href="/tags/%E5%9F%BA%E4%BA%8E%E5%93%8D%E5%BA%94%E7%9A%84%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#基于响应的知识蒸馏</a>
+        <a href="/tags/%E5%9F%BA%E4%BA%8E%E7%89%B9%E5%BE%81%E7%9A%84%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F/" class="print-no-link">#基于特征的知识蒸馏</a>
       
-        <a href="/tags/Normalized-knowledge-distillation/" class="print-no-link">#Normalized knowledge distillation</a>
+        <a href="/tags/Fitnet/" class="print-no-link">#Fitnet</a>
       
     </div>
   
@@ -368,8 +374,8 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>第四章：NKD算法实现</div>
-      <div>http://example.com/2024/04/16/第四章：NKD算法实现/</div>
+      <div>第五章：Fitnet的实现</div>
+      <div>http://example.com/2024/04/16/第五章：Fitnet的实现/</div>
     </div>
     <div class="license-meta">
       
@@ -413,9 +419,9 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2024/04/16/%E7%AC%AC%E4%BA%94%E7%AB%A0%EF%BC%9AFitnet%E7%9A%84%E5%AE%9E%E7%8E%B0/" title="第五章：Fitnet的实现">
+                      <a href="/2024/04/22/%E5%AE%9E%E7%8E%B0%E8%AE%AD%E7%BB%83%E6%97%B6%E7%9A%84%E6%97%B6%E9%97%B4%E9%A2%84%E6%B5%8B/" title="实现训练时的时间预测">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">第五章：Fitnet的实现</span>
+                        <span class="hidden-mobile">实现训练时的时间预测</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -423,8 +429,8 @@ class="math inline">\(p^T_{\backslash{t}}\)</span>变量，而且两者使用的
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2024/04/07/%E7%AC%AC%E4%B8%89%E7%AB%A0%EF%BC%9A%E8%A7%A3%E8%80%A6%E5%90%88%E7%9F%A5%E8%AF%86%E8%92%B8%E9%A6%8F%E7%AE%97%E6%B3%95/" title="第三章：解耦合知识蒸馏算法">
-                        <span class="hidden-mobile">第三章：解耦合知识蒸馏算法</span>
+                      <a href="/2024/04/16/%E7%AC%AC%E5%9B%9B%E7%AB%A0%EF%BC%9ANKD%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/" title="第四章：NKD算法实现">
+                        <span class="hidden-mobile">第四章：NKD算法实现</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
