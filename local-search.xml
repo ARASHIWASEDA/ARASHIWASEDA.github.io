@@ -4,7 +4,7 @@
   
   
   <entry>
-    <title></title>
+    <title>番外一：用Tensorrt对PyTorch模型进行量化部署</title>
     <link href="/2024/05/08/%E7%95%AA%E5%A4%96%E4%B8%80%EF%BC%9A%E7%94%A8Tensorrt%E5%AF%B9PyTorch%E6%A8%A1%E5%9E%8B%E8%BF%9B%E8%A1%8C%E9%87%8F%E5%8C%96%E9%83%A8%E7%BD%B2/"/>
     <url>/2024/05/08/%E7%95%AA%E5%A4%96%E4%B8%80%EF%BC%9A%E7%94%A8Tensorrt%E5%AF%B9PyTorch%E6%A8%A1%E5%9E%8B%E8%BF%9B%E8%A1%8C%E9%87%8F%E5%8C%96%E9%83%A8%E7%BD%B2/</url>
     
