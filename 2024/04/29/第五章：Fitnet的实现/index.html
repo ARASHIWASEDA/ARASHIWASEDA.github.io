@@ -24,7 +24,7 @@
 <meta property="og:description" content="这篇介绍一个区别于Logits-based KD算法的Feastures-based KD算法。 论文简介 文章是来自于2014年的FITNETS: HINTS FOR THIN DEEP NETS。 本博客前面介绍的几种KD算法都是基于对教师模型响应的蒸馏，即使用教师模型的输出作为Soft Labels充当学生模型的在真实标签（Hard Labels）以外的学习对象。 我们知道，神经">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-04-29T06:02:15.000Z">
-<meta property="article:modified_time" content="2024-07-11T06:08:36.573Z">
+<meta property="article:modified_time" content="2024-07-12T04:42:43.916Z">
 <meta property="article:author" content="Arashi">
 <meta property="article:tag" content="PyTorch">
 <meta property="article:tag" content="timm">
@@ -228,7 +228,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          1.1k 字
+          1.2k 字
         
       </span>
     
@@ -240,7 +240,7 @@
         
         
           <!-- compatible with older versions-->
-          10 分钟
+          11 分钟
         
       </span>
     
@@ -323,6 +323,32 @@ id="如何通过修改模型forward方法获取到模型的中间层特征">如�
 <p>可以手动把timm中的Resnet类拿出来，然后修改下面这两个方法，就可以获取到中间层特征了。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">forward_features</span>(<span class="hljs-params">self, x, requires_feature</span>):<br>    feat = []<br>    x = self.conv1<br>    x = self.bn1<br>    x = self.act1<br>    x = self.maxpool(x)<br><br>    x = self.layer1(x)<br>    feat.append(x)<br>    x = self.layer2(x)<br>    feat.append(x)<br>    x = self.layer3(x)<br>    feat.append(x)<br>    x = self.layer4(x)<br>    feat.append(x)<br><br>    <span class="hljs-keyword">return</span> (x, feat) <span class="hljs-keyword">if</span> requires_feature <span class="hljs-keyword">else</span> x<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">forward</span>(<span class="hljs-params">self, x, requires_feature=<span class="hljs-literal">False</span></span>):<br>    <span class="hljs-keyword">if</span> requires_feature:<br>        x, feat = self.forward_features(x, requires_feature)<br>        x = self.forward_head(x, pre_logits=<span class="hljs-literal">True</span>)<br>        feat.append(x)<br>        x = self.fc(x)<br>        <span class="hljs-keyword">return</span> x, feat<br>    <span class="hljs-keyword">else</span>:<br>        x = self.forward_features(x, <span class="hljs-literal">False</span>)<br>        x = self.forward_head(x)<br>        <span class="hljs-keyword">return</span> x<br></code></pre></td></tr></table></figure>
 <h2 id="实验效果">实验效果</h2>
+<p>照例还是用Resnet50（82.35）作为教师模型在CIFAR100上训练30个epoch，选了56、28、14和7大小的特征图进行蒸馏，结果只有76.83分，目前尝试过的所有KD算法中最差的一个。之所以效果不好，在前文也有简单的解释，目前看来，FitNet已经是一个比较过时的算法了。</p>
+<table>
+
+<thead>
+<tr>
+<th style="text-align: center;">Teacher</th>
+<th style="text-align: center;">Student</th>
+<th style="text-align: center;">From Scratch</th>
+<th style="text-align: center;">KD</th>
+<th>DKD</th>
+<th>NKD</th>
+<th>FitNet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">Resnet50 (82.35)</td>
+<td style="text-align: center;">Resnet18</td>
+<td style="text-align: center;">76.33</td>
+<td style="text-align: center;">79.85</td>
+<td>78.96</td>
+<td>80.23</td>
+<td>76.83</td>
+</tr>
+</tbody>
+</table>
 
                 
               </div>
@@ -418,6 +444,12 @@ id="如何通过修改模型forward方法获取到模型的中间层特征">如�
                 <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
+                    
+                      <a href="/2024/05/08/%E7%95%AA%E5%A4%96%E4%B8%80%EF%BC%9A%E7%94%A8Tensorrt%E5%AF%B9PyTorch%E6%A8%A1%E5%9E%8B%E8%BF%9B%E8%A1%8C%E9%87%8F%E5%8C%96%E9%83%A8%E7%BD%B2/" title="">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile"></span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
                     
                   </article>
                   <article class="post-next col-6">
